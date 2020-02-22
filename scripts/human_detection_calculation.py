@@ -6,7 +6,7 @@ from sensor_msgs.msg import Image, PointCloud2
 import numpy as np
 
 
-class HumanDetectionPredict(Node):
+class HumanDetectionCalculation(Node):
 
     def __init__(self, node_name: str):
         super().__init__(node_name)
@@ -15,15 +15,16 @@ class HumanDetectionPredict(Node):
         self.create_subscription(String, "/human_detection/command", self.callback_command, 10)
 
     def callback_command(self, msg):
-        if msg.data == "predict":
+        if msg.data == "calculation":
             self.is_start = True
         else:
             self.is_start = False
+            return
 
 
 def main():
     rclpy.init()
-    node = HumanDetectionPredict("HumanDetectionPredict")
+    node = HumanDetectionCalculation("HumanDetectionCalculation")
     rclpy.spin(node)
 
 
