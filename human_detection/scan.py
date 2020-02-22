@@ -2,6 +2,7 @@ import cv2
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
+from rione_msgs.msg import Command
 from sensor_msgs.msg import Image, PointCloud2
 import numpy as np
 
@@ -14,6 +15,11 @@ class HumanDetectionScan(Node):
         self.color_image = None
         self.point_xyz = None
         self.stack_around_info = []
+        self.pub_turn_command = self.create_publisher(
+            Command,
+            "/turn_robot/command",
+            10
+        )
         self.create_subscription(
             String,
             "/human_detection/command",
@@ -32,6 +38,12 @@ class HumanDetectionScan(Node):
             self.callback_point_cloud,
             10
         )
+        self.create_subscription(
+            String,
+            "/turn_robot/status",
+            self.callback_turn_status,
+            10
+        )
 
     def callback_command(self, msg):
         if msg.data == "start":
@@ -40,6 +52,10 @@ class HumanDetectionScan(Node):
             self.is_start = False
             return
 
+        # 回転の開始
+        self.pub_turn_command.publish(Command(command="START", content=360))
+
+        print("データ取得開始")
         while rclpy.ok():
             pass
 
@@ -65,6 +81,10 @@ class HumanDetectionScan(Node):
 
         cv2.imshow("depth", (real_data[:, :, 2] * 25).astype(int).astype(np.uint8))
         cv2.waitKey(1)
+
+    def callback_turn_status(self, msg: String):
+        if msg.data == "FINISH":
+            self.is_start = False
 
 
 def main():
