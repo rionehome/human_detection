@@ -7,9 +7,9 @@ setup(
     version='0.0.0',
     packages=[],
     py_modules=[
-        'script.human_detection_scan',
-        'script.human_detection_predict',
-        'script.human_detection_calculation',
+        'human_detection.scan',
+        'human_detection.predict',
+        'human_detection.calculation',
     ],
     data_files=[
         ('share/ament_index/resource_index/packages',
@@ -25,9 +25,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'scan = script.human_detection_scan:main',
-            'predict = script.human_detection_predict:main',
-            'calculation = script.human_detection_calculation:main',
+            'scan = human_detection.scan:main',
+            'predict = human_detection.predict:main',
+            'calculation = human_detection.calculation:main',
         ],
     },
 )
