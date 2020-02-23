@@ -12,8 +12,9 @@ class HumanDetectionScan(Node):
     def __init__(self, node_name: str):
         super().__init__(node_name)
         self.is_start = False
-        self.color_image = None
-        self.point_xyz = None
+        self.color_image_stack = []
+        self.point_xyz_stack = []
+        self.odometry_stack = []
         self.stack_around_info = []
         self.pub_turn_command = self.create_publisher(
             Command,
@@ -56,8 +57,6 @@ class HumanDetectionScan(Node):
         self.pub_turn_command.publish(Command(command="START", content=360))
 
         print("データ取得開始")
-        while rclpy.ok():
-            pass
 
     def callback_odom(self, msg):
         if not self.is_start:
@@ -68,8 +67,8 @@ class HumanDetectionScan(Node):
         if not self.is_start:
             return
 
-        self.color_image = np.asarray(msg.data).reshape((msg.height, msg.width, 3)).astype(np.uint8)
-        cv2.imshow("depth", self.color_image)
+        self.color_image_stack.append(np.asarray(msg.data).reshape((msg.height, msg.width, 3)).astype(np.uint8))
+        cv2.imshow("depth", self.color_image_stack[-1])
         cv2.waitKey(1)
 
     def callback_point_cloud(self, msg: PointCloud2):
@@ -77,7 +76,7 @@ class HumanDetectionScan(Node):
             return
 
         real_data = np.asarray(msg.data, dtype=np.uint8).view(dtype=np.float32).reshape((msg.height, msg.width, 8))
-        self.point_xyz = np.asarray([real_data[:, :, 0], real_data[:, :, 1], real_data[:, :, 2]])
+        self.point_xyz_stack.append(np.asarray([real_data[:, :, 0], real_data[:, :, 1], real_data[:, :, 2]]))
 
         cv2.imshow("depth", (real_data[:, :, 2] * 25).astype(int).astype(np.uint8))
         cv2.waitKey(1)
@@ -85,6 +84,12 @@ class HumanDetectionScan(Node):
     def callback_turn_status(self, msg: String):
         if msg.data == "FINISH":
             self.is_start = False
+
+        np.save("log/scan_log.npy", np.asarray([
+            np.asarray(self.odometry_stack),
+            np.asarray(self.color_image_stack),
+            np.asarray(self.point_xyz_stack),
+        ]))
 
 
 def main():
