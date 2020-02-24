@@ -36,7 +36,7 @@ class HumanDetectionScan(Node):
         )
         self.create_subscription(
             Odometry,
-            "localization",
+            "/turtlebot2/odometry",
             self.callback_odometry,
             10
         )
