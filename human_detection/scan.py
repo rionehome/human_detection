@@ -55,7 +55,6 @@ class HumanDetectionScan(Node):
 
         # 回転の開始
         self.pub_turn_command.publish(Command(command="START", content=360))
-
         print("データ取得開始")
 
     def callback_odom(self, msg):
