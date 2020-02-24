@@ -1,6 +1,9 @@
 import os
+import shutil
 
-# import cv2
+import cv2
+import time
+
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
@@ -96,6 +99,12 @@ class HumanDetectionScan(Node):
         z = msg.pose.pose.position.z
         radian = self.to_quaternion_rad(msg.pose.pose.orientation.w, msg.pose.pose.orientation.z)
         self.odometry = [x, y, z, radian]
+        """
+        # データの統合
+        if self.odometry is None or self.color_image is None or self.point_xyz is None:
+            return
+        self.save([self.odometry, self.color_image, self.point_xyz], "around_info")
+        """
 
     def callback_color_image(self, msg: Image):
         if not self.is_start:
@@ -112,10 +121,11 @@ class HumanDetectionScan(Node):
         # cv2.imshow("depth", (self.point_xyz[2] * 25).astype(int).astype(np.uint8))
         # cv2.waitKey(1)
 
-        # データの統合
+        """# データの統合
         if self.color_image is None or self.point_xyz is None:
             return
         self.save([self.odometry, self.color_image, self.point_xyz], "around_info")
+        """
 
     def callback_turn_status(self, msg: String):
         if not msg.data == "FINISH":
@@ -129,7 +139,18 @@ class HumanDetectionScan(Node):
 def main():
     rclpy.init()
     node = HumanDetectionScan("HumanDetectionScan")
-    rclpy.spin(node)
+    if os.path.exists(LOG_DIR):  # ディレクトリがあれば
+        shutil.rmtree(LOG_DIR)
+        os.makedirs(LOG_DIR)
+    while rclpy.ok():
+        rclpy.spin_once(node)
+        if node.is_start:
+            # データの統合
+            if not node.color_image is None and not node.point_xyz is None:
+                cv2.imshow("color", node.color_image)
+                cv2.waitKey(1)
+                # node.save([node.odometry, node.color_image, node.point_xyz], "around_info")
+                # time.sleep(0.03)
 
 
 if __name__ == '__main__':
