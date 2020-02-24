@@ -2,9 +2,11 @@ import cv2
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
+from nav_msgs.msg import Odometry
 from rione_msgs.msg import Command
 from sensor_msgs.msg import Image, PointCloud2
 import numpy as np
+import math
 
 
 class HumanDetectionScan(Node):
@@ -28,6 +30,12 @@ class HumanDetectionScan(Node):
             10
         )
         self.create_subscription(
+            Odometry,
+            "localization",
+            self.callback_odometry,
+            10
+        )
+        self.create_subscription(
             Image,
             "/camera/color/image_raw",
             self.callback_color_image,
@@ -46,26 +54,32 @@ class HumanDetectionScan(Node):
             10
         )
 
-    def callback_command(self, msg):
+    @staticmethod
+    def to_quaternion_rad(w, z):
+        return math.acos(w) * 2 * np.sign(z)
+
+    def callback_command(self, msg: String):
         if msg.data == "start":
             self.is_start = True
         else:
             self.is_start = False
             return
-
         # 回転の開始
         self.pub_turn_command.publish(Command(command="START", content=360))
         print("データ取得開始")
 
-    def callback_odom(self, msg):
+    def callback_odometry(self, msg: Odometry):
         if not self.is_start:
             return
-        pass
+        x = msg.pose.pose.position.x
+        y = msg.pose.pose.position.y
+        z = msg.pose.pose.position.z
+        radian = self.to_quaternion_rad(msg.pose.pose.orientation.w, msg.pose.pose.orientation.z)
+        self.odometry_stack.append([x, y, z, radian])
 
     def callback_color_image(self, msg: Image):
         if not self.is_start:
             return
-
         self.color_image_stack.append(np.asarray(msg.data).reshape((msg.height, msg.width, 3)).astype(np.uint8))
         cv2.imshow("depth", self.color_image_stack[-1])
         cv2.waitKey(1)
@@ -73,7 +87,6 @@ class HumanDetectionScan(Node):
     def callback_point_cloud(self, msg: PointCloud2):
         if not self.is_start:
             return
-
         real_data = np.asarray(msg.data, dtype=np.uint8).view(dtype=np.float32).reshape((msg.height, msg.width, 8))
         self.point_xyz_stack.append(np.asarray([real_data[:, :, 0], real_data[:, :, 1], real_data[:, :, 2]]))
 
@@ -83,7 +96,6 @@ class HumanDetectionScan(Node):
     def callback_turn_status(self, msg: String):
         if msg.data == "FINISH":
             self.is_start = False
-
         np.save("log/scan_log.npy", np.asarray([
             np.asarray(self.odometry_stack),
             np.asarray(self.color_image_stack),
