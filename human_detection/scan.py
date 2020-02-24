@@ -1,3 +1,5 @@
+import os
+
 import cv2
 import rclpy
 from rclpy.node import Node
@@ -7,6 +9,9 @@ from rione_msgs.msg import Command
 from sensor_msgs.msg import Image, PointCloud2
 import numpy as np
 import math
+import joblib
+
+LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log/")
 
 
 class HumanDetectionScan(Node):
@@ -65,7 +70,7 @@ class HumanDetectionScan(Node):
             self.is_start = False
             return
         # 回転の開始
-        self.pub_turn_command.publish(Command(command="START", content=360))
+        self.pub_turn_command.publish(Command(command="START", content="360"))
         print("データ取得開始")
 
     def callback_odometry(self, msg: Odometry):
@@ -81,7 +86,7 @@ class HumanDetectionScan(Node):
         if not self.is_start:
             return
         self.color_image_stack.append(np.asarray(msg.data).reshape((msg.height, msg.width, 3)).astype(np.uint8))
-        cv2.imshow("depth", self.color_image_stack[-1])
+        cv2.imshow("color", self.color_image_stack[-1])
         cv2.waitKey(1)
 
     def callback_point_cloud(self, msg: PointCloud2):
@@ -89,18 +94,27 @@ class HumanDetectionScan(Node):
             return
         real_data = np.asarray(msg.data, dtype=np.uint8).view(dtype=np.float32).reshape((msg.height, msg.width, 8))
         self.point_xyz_stack.append(np.asarray([real_data[:, :, 0], real_data[:, :, 1], real_data[:, :, 2]]))
-
-        cv2.imshow("depth", (real_data[:, :, 2] * 25).astype(int).astype(np.uint8))
+        cv2.imshow("depth", (self.point_xyz_stack[-1][2] * 25).astype(int).astype(np.uint8))
         cv2.waitKey(1)
 
     def callback_turn_status(self, msg: String):
-        if msg.data == "FINISH":
-            self.is_start = False
-        np.save("log/scan_log.npy", np.asarray([
+        if not self.is_start or not msg.data == "FINISH":
+            return
+        self.is_start = False
+        print("scanデータ保存")
+        if not os.path.exists(LOG_DIR):  # ディレクトリ がなければ
+            os.makedirs(LOG_DIR)
+
+        save_data = np.asarray([
             np.asarray(self.odometry_stack),
             np.asarray(self.color_image_stack),
             np.asarray(self.point_xyz_stack),
-        ]))
+        ])
+
+        print(save_data)
+
+        joblib.dump(save_data, os.path.join(LOG_DIR, "scan_log.npy"), compress=True)
+        print("scanデータ保存完了")
 
 
 def main():
