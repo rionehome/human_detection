@@ -1,6 +1,6 @@
 import os
 
-import cv2
+# import cv2
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
@@ -12,6 +12,7 @@ import math
 import joblib
 
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log/")
+NUM_SAVE_POINT = 1
 
 
 class HumanDetectionScan(Node):
@@ -19,10 +20,11 @@ class HumanDetectionScan(Node):
     def __init__(self, node_name: str):
         super().__init__(node_name)
         self.is_start = False
-        self.color_image_stack = []
-        self.point_xyz_stack = []
-        self.odometry_stack = []
-        self.stack_around_info = []
+        self.count_files = 0
+        self.around_info_stack = []
+        self.color_image = None
+        self.point_xyz = None
+        self.odometry = None
         self.pub_turn_command = self.create_publisher(
             Command,
             "/turn_robot/command",
@@ -58,10 +60,25 @@ class HumanDetectionScan(Node):
             self.callback_turn_status,
             10
         )
+        self.pub_human_detection_command = self.create_publisher(
+            String,
+            "/human_detection/command",
+            10
+        )
 
     @staticmethod
     def to_quaternion_rad(w, z):
         return math.acos(w) * 2 * np.sign(z)
+
+    def save(self, save_data: list, typename: str):
+        if not os.path.exists(LOG_DIR):  # ディレクトリがなければ
+            os.makedirs(LOG_DIR)
+        joblib.dump(save_data, os.path.join(LOG_DIR, "scan_{}.{}.npy".format(typename, self.count_files + 1)),
+                    compress=True)
+        # np.save(os.path.join(LOG_DIR, "scan_{}.{}.npy".format(typename, self.count_files + 1)), np.asarray(save_data))
+        save_data.clear()
+        self.count_files = self.count_files + 1
+        # print("save {}".format(typename))
 
     def callback_command(self, msg: String):
         if msg.data == "start":
@@ -80,41 +97,35 @@ class HumanDetectionScan(Node):
         y = msg.pose.pose.position.y
         z = msg.pose.pose.position.z
         radian = self.to_quaternion_rad(msg.pose.pose.orientation.w, msg.pose.pose.orientation.z)
-        self.odometry_stack.append([x, y, z, radian])
+        self.odometry = [x, y, z, radian]
 
     def callback_color_image(self, msg: Image):
         if not self.is_start:
             return
-        self.color_image_stack.append(np.asarray(msg.data).reshape((msg.height, msg.width, 3)).astype(np.uint8))
-        cv2.imshow("color", self.color_image_stack[-1])
-        cv2.waitKey(1)
+        self.color_image = np.asarray(msg.data).reshape((msg.height, msg.width, 3)).astype(np.uint8)
+        # cv2.imshow("color", self.color_image)
+        # cv2.waitKey(1)
 
     def callback_point_cloud(self, msg: PointCloud2):
         if not self.is_start:
             return
         real_data = np.asarray(msg.data, dtype=np.uint8).view(dtype=np.float32).reshape((msg.height, msg.width, 8))
-        self.point_xyz_stack.append(np.asarray([real_data[:, :, 0], real_data[:, :, 1], real_data[:, :, 2]]))
-        cv2.imshow("depth", (self.point_xyz_stack[-1][2] * 25).astype(int).astype(np.uint8))
-        cv2.waitKey(1)
+        self.point_xyz = [real_data[:, :, 0], real_data[:, :, 1], real_data[:, :, 2]]
+        # cv2.imshow("depth", (self.point_xyz[2] * 25).astype(int).astype(np.uint8))
+        # cv2.waitKey(1)
+
+        # データの統合
+        if self.color_image is None or self.point_xyz is None:
+            return
+        self.save([self.odometry, self.color_image, self.point_xyz], "around_info")
 
     def callback_turn_status(self, msg: String):
         if not self.is_start or not msg.data == "FINISH":
             return
         self.is_start = False
-        print("scanデータ保存")
-        if not os.path.exists(LOG_DIR):  # ディレクトリ がなければ
-            os.makedirs(LOG_DIR)
-
-        save_data = np.asarray([
-            np.asarray(self.odometry_stack),
-            np.asarray(self.color_image_stack),
-            np.asarray(self.point_xyz_stack),
-        ])
-
-        print(save_data)
-
-        joblib.dump(save_data, os.path.join(LOG_DIR, "scan_log.npy"), compress=True)
+        self.save([self.odometry, self.color_image, self.point_xyz], "around_info")
         print("scanデータ保存完了")
+        self.pub_human_detection_command.publish(String(data="predict"))
 
 
 def main():

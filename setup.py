@@ -16,7 +16,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name, ['launch/human_detection.launch.py']),
     ],
-    install_requires=['setuptools', 'numpy', 'launch'],
+    install_requires=['setuptools', 'numpy', 'launch', 'joblib'],
     zip_safe=True,
     maintainer='hirorittsu',
     maintainer_email='zq6295migly@gmail.com',
