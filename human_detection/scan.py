@@ -84,6 +84,9 @@ class HumanDetectionScan(Node):
         else:
             self.is_start = False
             return
+        if os.path.exists(LOG_DIR):  # ディレクトリがあれば
+            shutil.rmtree(LOG_DIR)
+            os.makedirs(LOG_DIR)
         # 回転の開始
         self.pub_turn_command.publish(Command(command="START", content="360"))
         print("データ取得開始")
@@ -122,9 +125,6 @@ class HumanDetectionScan(Node):
 
 
 def main():
-    if os.path.exists(LOG_DIR):  # ディレクトリがあれば
-        shutil.rmtree(LOG_DIR)
-        os.makedirs(LOG_DIR)
     rclpy.init()
     node = HumanDetectionScan("HumanDetectionScan")
     while rclpy.ok():
