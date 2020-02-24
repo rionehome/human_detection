@@ -5,6 +5,7 @@ from launch.actions import LogInfo
 
 def generate_launch_description():
     return LaunchDescription([
+        #############################################################
         LogInfo(
             msg="launch realsense_ros2_camera"
         ),
@@ -13,6 +14,16 @@ def generate_launch_description():
             node_executable="realsense_ros2_camera",
             output="screen"
         ),
+        #############################################################
+        LogInfo(
+            msg="launch slam_gmapping"
+        ),
+        Node(
+            package='slam_gmapping',
+            node_executable='slam_gmapping',
+            output='screen'
+        ),
+        #############################################################
         LogInfo(
             msg="launch face_predictor"
         ),
@@ -21,6 +32,31 @@ def generate_launch_description():
             node_executable="face_predictor",
             output="screen"
         ),
+        #############################################################
+        LogInfo(
+            msg="launch turn_robot"
+        ),
+        Node(
+            package="turn_robot",
+            node_executable="turn_robot",
+        ),
+        #############################################################
+        LogInfo(
+            msg="launch turtlebot_bringup"
+        ),
+        Node(
+            package="ydlidar",
+            node_executable="ydlidar_node",
+            output="screen",
+            parameters=["ydlidar.yaml"]
+        ),
+        Node(
+            package="turtlebot_bringup",
+            node_executable="turtlebot2",
+            output="screen",
+            parameters=["turtlebot2.yaml"]
+        ),
+        #############################################################
         LogInfo(
             msg="launch human_detection"
         ),
