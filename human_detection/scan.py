@@ -12,7 +12,6 @@ import math
 import joblib
 
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log/")
-NUM_SAVE_POINT = 1
 
 
 class HumanDetectionScan(Node):
@@ -21,7 +20,6 @@ class HumanDetectionScan(Node):
         super().__init__(node_name)
         self.is_start = False
         self.count_files = 0
-        self.around_info_stack = []
         self.color_image = None
         self.point_xyz = None
         self.odometry = None
@@ -120,7 +118,7 @@ class HumanDetectionScan(Node):
         self.save([self.odometry, self.color_image, self.point_xyz], "around_info")
 
     def callback_turn_status(self, msg: String):
-        if not self.is_start or not msg.data == "FINISH":
+        if not msg.data == "FINISH":
             return
         self.is_start = False
         self.save([self.odometry, self.color_image, self.point_xyz], "around_info")
