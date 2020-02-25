@@ -1,6 +1,6 @@
 import os
-import shutil
 import math
+import time
 
 import rclpy
 from rclpy.node import Node
@@ -36,26 +36,21 @@ class HumanDetectionScanOdometry(Node):
         return math.acos(w) * 2 * np.sign(z)
 
     def save(self, save_data: list, typename: str):
-        if not os.path.exists(LOG_DIR):  # ディレクトリがなければ
-            os.makedirs(LOG_DIR)
-        joblib.dump(save_data, os.path.join(LOG_DIR, "scan_{}.{}.npy".format(typename, self.count_files + 1)),
+        save_path = os.path.join(LOG_DIR, typename)
+        if not os.path.exists(save_path):  # ディレクトリがなければ
+            os.makedirs(save_path)
+        joblib.dump(save_data, os.path.join(save_path, "scan_{}.{}.npy".format(typename, self.count_files + 1)),
                     compress=True)
-        # np.save(os.path.join(LOG_DIR, "scan_{}.{}.npy".format(typename, self.count_files + 1)), np.asarray(save_data))
         save_data.clear()
         self.count_files = self.count_files + 1
-        # print("save {}".format(typename))
 
     def callback_command(self, msg: String):
-        if msg.data == "start":
+        if not msg.data == "odometry":
             self.is_start = True
-        else:
+            print("データ取得開始")
+        elif msg.data == "stop":
             self.is_start = False
-            return
-        if os.path.exists(LOG_DIR):  # ディレクトリがあれば
-            shutil.rmtree(LOG_DIR)
-            os.makedirs(LOG_DIR)
-
-        print("データ取得開始")
+            print("データ取得終了")
 
     def callback_odometry(self, msg: Odometry):
         if not self.is_start:
@@ -65,6 +60,7 @@ class HumanDetectionScanOdometry(Node):
         z = msg.pose.pose.position.z
         radian = self.to_quaternion_rad(msg.pose.pose.orientation.w, msg.pose.pose.orientation.z)
         odometry = [x, y, z, radian]
+        self.save([time.time(), odometry], "odometry")
 
 
 def main():
