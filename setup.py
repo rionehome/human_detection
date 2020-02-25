@@ -7,7 +7,10 @@ setup(
     version='0.0.0',
     packages=[],
     py_modules=[
-        'human_detection.scan',
+        'human_detection.scan_main',
+        'human_detection.scan_image',
+        'human_detection.scan_odometry',
+        'human_detection.scan_xyz',
         'human_detection.predict',
         'human_detection.calculation',
     ],
@@ -25,7 +28,10 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'scan = human_detection.scan:main',
+            'scan_main = human_detection.scan_main:main',
+            'scan_image = human_detection.scan_image:main',
+            'scan_odometry = human_detection.scan_odometry:main',
+            'scan_xyz = human_detection.scan_xyz:main',
             'predict = human_detection.predict:main',
             'calculation = human_detection.calculation:main',
         ],
