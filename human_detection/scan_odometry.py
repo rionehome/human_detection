@@ -18,18 +18,8 @@ class HumanDetectionScanOdometry(Node):
         super().__init__(node_name)
         self.is_start = False
         self.count_files = 0
-        self.create_subscription(
-            String,
-            "/human_detection/command/scan",
-            self.callback_command,
-            10
-        )
-        self.create_subscription(
-            Odometry,
-            "/turtlebot2/odometry",
-            self.callback_odometry,
-            10
-        )
+        self.create_subscription(String, "/human_detection/command/scan", self.callback_command, 50)
+        self.create_subscription(Odometry, "/turtlebot2/odometry", self.callback_odometry, 1)
 
     @staticmethod
     def to_quaternion_rad(w, z):
@@ -45,12 +35,11 @@ class HumanDetectionScanOdometry(Node):
         self.count_files = self.count_files + 1
 
     def callback_command(self, msg: String):
-        if not msg.data == "odometry":
+        if msg.data == "odometry":
             self.is_start = True
-            print("データ取得開始")
+            print("odometryデータ取得開始", flush=True)
         elif msg.data == "stop":
             self.is_start = False
-            print("データ取得終了")
 
     def callback_odometry(self, msg: Odometry):
         if not self.is_start:

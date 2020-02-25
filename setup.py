@@ -18,6 +18,7 @@ setup(
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name, ['launch/human_detection.launch.py']),
+        ('share/' + package_name, ['launch/vision_only.launch.py']),
     ],
     install_requires=['setuptools', 'numpy', 'launch', 'joblib', 'tqdm', 'opencv-python'],
     zip_safe=True,

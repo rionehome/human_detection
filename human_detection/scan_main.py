@@ -13,8 +13,8 @@ class HumanDetectionScanMain(Node):
 
     def __init__(self, node_name: str):
         super().__init__(node_name)
-        self.create_subscription(String, "/human_detection/command", self.callback_command, 10)
-        self.create_subscription(String, "/turn_robot/status", self.callback_turn_status, 10)
+        self.create_subscription(String, "/human_detection/command", self.callback_command, 50)
+        self.create_subscription(String, "/turn_robot/status", self.callback_turn_status, 50)
         self.pub_turn_command = self.create_publisher(Command, "/turn_robot/command", 10)
         self.pub_human_detection_command_scan = self.create_publisher(String, "/human_detection/command/scan", 10)
         self.pub_human_detection_command = self.create_publisher(String, "/human_detection/command", 10)
@@ -24,12 +24,12 @@ class HumanDetectionScanMain(Node):
             return
         if os.path.exists(LOG_DIR):  # ディレクトリがあれば
             shutil.rmtree(LOG_DIR)
-            os.makedirs(LOG_DIR)
+        os.makedirs(LOG_DIR)
 
         # scanの開始
-        self.pub_human_detection_command_scan.publish(String(data="image"))
         self.pub_human_detection_command_scan.publish(String(data="odometry"))
         self.pub_human_detection_command_scan.publish(String(data="xyz"))
+        self.pub_human_detection_command_scan.publish(String(data="image"))
 
         # 回転の開始
         self.pub_turn_command.publish(Command(command="START", content="360"))
@@ -37,6 +37,8 @@ class HumanDetectionScanMain(Node):
     def callback_turn_status(self, msg: String):
         if not msg.data == "FINISH":
             return
+        print("データ取得終了", flush=True)
+        self.pub_human_detection_command_scan.publish(String(data="stop"))
         self.pub_human_detection_command.publish(String(data="predict"))
 
 
