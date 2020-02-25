@@ -20,7 +20,7 @@ setup(
         ('share/' + package_name, ['launch/human_detection.launch.py']),
         ('share/' + package_name, ['launch/vision_only.launch.py']),
     ],
-    install_requires=['setuptools', 'numpy', 'launch', 'joblib', 'tqdm', 'opencv-python'],
+    install_requires=['setuptools', 'numpy', 'launch', 'joblib', 'opencv-python', 'yaml'],
     zip_safe=True,
     maintainer='hirorittsu',
     maintainer_email='zq6295migly@gmail.com',

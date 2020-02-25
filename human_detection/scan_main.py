@@ -27,8 +27,8 @@ class HumanDetectionScanMain(Node):
         os.makedirs(LOG_DIR)
 
         # scanの開始
+        self.pub_human_detection_command_scan.publish(String(data="xyz"))  # こいつだけメッセージが抜ける
         self.pub_human_detection_command_scan.publish(String(data="odometry"))
-        self.pub_human_detection_command_scan.publish(String(data="xyz"))
         self.pub_human_detection_command_scan.publish(String(data="image"))
 
         # 回転の開始
