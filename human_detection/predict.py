@@ -1,15 +1,16 @@
 import glob
 import os
-import re
-import numpy as np
-import matplotlib.pyplot as plt
 
+import numpy as np
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from rione_msgs.msg import PredictResult
 import joblib
+
+from lib import Logger
+from lib.module import numerical_sort
 
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log/")
 IMAGE_HEIGHT = 480
@@ -20,6 +21,7 @@ class HumanDetectionPredict(Node):
 
     def __init__(self, node_name: str):
         super().__init__(node_name)
+        self.count_complete = 0
         self.log_image_files = None
         self.log_xyz_files = None
         self.log_odom_files = None
@@ -28,13 +30,14 @@ class HumanDetectionPredict(Node):
         self.create_subscription(String, "/human_detection/command", self.callback_command, 10)
         self.create_subscription(PredictResult, "/face_predictor/result", self.callback_face_predict_result, 10)
         self.pub_image = self.create_publisher(Image, "/face_predictor/color/image", 10)
+        self.logger = Logger.Logger(os.path.join(LOG_DIR, "predict"))
 
-    @staticmethod
-    def numerical_sort(value):
-        numbers = re.compile(r'(\d+)')
-        parts = numbers.split(value)
-        parts[1::2] = map(int, parts[1::2])
-        return parts
+    def complete_predict(self):
+        if self.count_complete < 3:
+            return
+
+        # save
+        self.logger.save(self.face_dataset)
 
     def callback_face_predict_result(self, msg: PredictResult):
         """
@@ -58,8 +61,6 @@ class HumanDetectionPredict(Node):
                 pos_y = self.log_odom_files[applicable_odom_index][1][1]
                 pos_z = self.log_odom_files[applicable_odom_index][1][2]
                 radian = self.log_odom_files[applicable_odom_index][1][3]
-                plt.imshow(image[int(p1.y):int(p2.y), int(p1.x):int(p2.x)])
-                plt.pause(.01)
                 self.face_dataset.append({
                     "face_image": image[int(p1.y):int(p2.y), int(p1.x):int(p2.x)],
                     "x": x,
@@ -70,7 +71,6 @@ class HumanDetectionPredict(Node):
                     "pos_y": pos_y,
                     "pos_z": pos_z,
                 })
-                print(self.face_dataset[-1])
 
         self.target_index = self.target_index + 1
         if self.target_index < len(self.log_image_files):
@@ -86,20 +86,21 @@ class HumanDetectionPredict(Node):
         """
         if not msg.data == "predict":
             return
-        print("load logs", flush=True)
+        print("Loading...", flush=True)
         image_list = []
         xyz_list = []
         odom_list = []
+
         # logファイルの読み込み
-        for filename in sorted(glob.glob("{}/image/scan_*".format(LOG_DIR)), key=self.numerical_sort):
+        for filename in sorted(glob.glob("{}/scan/image/*".format(LOG_DIR)), key=numerical_sort):
             image_list.append(joblib.load(filename))
         self.log_image_files = np.asarray(image_list)
 
-        for filename in sorted(glob.glob("{}/xyz/scan_*".format(LOG_DIR)), key=self.numerical_sort):
+        for filename in sorted(glob.glob("{}/scan/xyz/*".format(LOG_DIR)), key=numerical_sort):
             xyz_list.append(joblib.load(filename))
         self.log_xyz_files = np.asarray(xyz_list)
 
-        for filename in sorted(glob.glob("{}/odometry/scan_*".format(LOG_DIR)), key=self.numerical_sort):
+        for filename in sorted(glob.glob("{}/scan/odometry/*".format(LOG_DIR)), key=numerical_sort):
             odom_list.append(joblib.load(filename))
         self.log_odom_files = np.asarray(odom_list)
 
