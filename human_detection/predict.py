@@ -29,15 +29,15 @@ class HumanDetectionPredict(Node):
         self.target_index = 0
         self.create_subscription(String, "/human_detection/command", self.callback_command, 10)
         self.create_subscription(PredictResult, "/face_predictor/result", self.callback_face_predict_result, 10)
+        self.pub_human_detection_command = self.create_publisher(String, "/human_detection/command", 10)
         self.pub_image = self.create_publisher(Image, "/face_predictor/color/image", 10)
         self.logger = Logger.Logger(os.path.join(LOG_DIR, "predict"))
 
     def complete_predict(self):
         if self.count_complete < 3:
             return
-
-        # save
         self.logger.save(self.face_dataset)
+        self.pub_human_detection_command.publish(String(data="calculation"))
 
     def callback_face_predict_result(self, msg: PredictResult):
         """
@@ -77,6 +77,8 @@ class HumanDetectionPredict(Node):
             self.pub_image.publish(Image(data=self.log_image_files[self.target_index][1]))
         else:
             print("finish")
+            self.count_complete = 4
+            self.complete_predict()
 
     def callback_command(self, msg: String):
         """
