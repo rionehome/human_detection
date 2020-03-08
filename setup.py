@@ -43,7 +43,8 @@ setup(
           'human_detection/lib/module.py',
           'human_detection/lib/Logger.py'])
     ],
-    install_requires=['setuptools', 'numpy', 'launch', 'joblib', 'opencv-python', 'matplotlib', 'sklearn', 'pandas'],
+    install_requires=['setuptools', 'numpy', 'launch', 'joblib', 'opencv-python', 'matplotlib', 'sklearn', 'pandas',
+                      'chainer'],
     zip_safe=True,
     maintainer='hirorittsu',
     maintainer_email='zq6295migly@gmail.com',

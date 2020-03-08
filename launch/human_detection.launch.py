@@ -5,6 +5,7 @@ from launch.actions import LogInfo
 
 def generate_launch_description():
     return LaunchDescription([
+        """
         #############################################################
         LogInfo(
             msg="launch slam_gmapping"
@@ -14,6 +15,7 @@ def generate_launch_description():
             node_executable='slam_gmapping',
             output='screen'
         ),
+        """,
         #############################################################
         LogInfo(
             msg="launch turn_robot"
