@@ -13,6 +13,11 @@ def numerical_sort(value):
     return parts
 
 
+def normalize_image(image: np.ndarray, image_size: int):
+    image = cv2.resize(image, (image_size, image_size))
+    return image
+
+
 def to_quaternion_rad(w, z):
     return math.acos(w) * 2 * np.sign(z)
 
@@ -27,10 +32,10 @@ def calc_real_position(x, y, z, pos_x, pos_y, pos_radian):
     return result_x, result_y, result_z
 
 
-def convert_normal_to_unit(image: np.ndarray):
+def convert_unit_image(image: np.ndarray):
     if np.min(image) < 0:
         image = (image + 1) / 2
-    if not np.max(image) >= 255:
+    if np.max(image) > 255:
         image = image * 255
     if image.shape[-1] == 1:
         image = image.reshape(image.shape[0], image.shape[1])
@@ -50,12 +55,11 @@ def show_image_tile(images_array: list, save_dir=None):
     for images_index, images in enumerate(images_array):
         images = np.asarray(images)
         if len(images.shape) == 3:
-            display_img = convert_normal_to_unit(images)
+            display_img = convert_unit_image(images)
             if display_img.shape[-1] == 3:
                 # color
                 if save_dir is None:
-                    # plt.imshow(display_img)
-                    cv2.imshow("window", display_img)
+                    plt.imshow(display_img)
                 else:
                     plt.imsave(os.path.join(save_path, "{}.png".format(num_exist_files + images_index)), display_img)
             else:
@@ -65,15 +69,14 @@ def show_image_tile(images_array: list, save_dir=None):
                 else:
                     plt.imsave(os.path.join(save_path, "{}.png".format(num_exist_files + images_index)), display_img,
                                cmap="gray")
-            # plt.show()
-            cv2.waitKey(1)
+            plt.show()
         elif len(images.shape) == 4:
             tile_length = int(math.sqrt(images.shape[0])) + 1
             if images.shape[-1] == 1:
                 # gray
                 tile = np.full((tile_length, tile_length, images.shape[1], images.shape[2]), 255)
                 for i in range(images.shape[0]):
-                    tile[i // tile_length, i % tile_length] = convert_normal_to_unit(images[i])
+                    tile[i // tile_length, i % tile_length] = convert_unit_image(images[i])
                 display_img = cv2.vconcat([cv2.hconcat(h) for h in tile])
                 if save_dir is None:
                     plt.imshow(display_img, cmap="gray")
@@ -84,7 +87,7 @@ def show_image_tile(images_array: list, save_dir=None):
                 # color
                 tile = np.full((tile_length, tile_length, images.shape[1], images.shape[2], images.shape[3]), 255)
                 for i in range(images.shape[0]):
-                    tile[i // tile_length, i % tile_length] = convert_normal_to_unit(images[i])
+                    tile[i // tile_length, i % tile_length] = convert_unit_image(images[i])
                 display_img = cv2.vconcat([cv2.hconcat(h) for h in tile])
                 if save_dir is None:
                     plt.imshow(display_img)
