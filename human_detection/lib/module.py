@@ -18,10 +18,11 @@ def normalize_image(image: np.ndarray, image_size: int):
     return image
 
 
-def compare(img, img2):
-    img = (img - img.mean()) / img.std()
-    img2 = (img2 - img2.mean()) / img2.std()
-    return np.mean(np.abs(img - img2))
+def compare(row_img: np.ndarray, row_pos: tuple, col_img: np.ndarray, col_pos: tuple):
+    row_img = (row_img - row_img.mean()) / row_img.std()
+    col_img = (col_img - col_img.mean()) / col_img.std()
+    pos_distance = math.sqrt(np.sum(np.abs(np.asarray(row_pos) - np.asarray(col_pos)) ** 2))
+    return np.mean(np.abs(row_img - col_img)) + pos_distance
 
 
 def to_quaternion_rad(w, z):
@@ -102,20 +103,3 @@ def show_image_tile(images_array: list, save_dir=None):
             plt.show()
         else:
             print("次元多し")
-
-
-def show_eight(imgs, title):
-    select_imgs = [imgs[np.random.choice(len(imgs))] for _ in range(8)]
-    _, ax = plt.subplots(2, 4, sharex='col', sharey='row', figsize=(20, 6))
-    plt.suptitle(title, size=20)
-    for i, img in enumerate(select_imgs):
-        ax[i // 4, i % 4].imshow(img)
-
-
-def show_four(imgs, title):
-    # select_imgs = [np.random.choice(imgs) for _ in range(4)]
-    select_imgs = [imgs[np.random.choice(len(imgs))] for _ in range(4)]
-    _, ax = plt.subplots(1, 4, sharex='col', sharey='row', figsize=(20, 3))
-    plt.suptitle(title, size=20)
-    for i, img in enumerate(select_imgs):
-        ax[i].imshow(img)

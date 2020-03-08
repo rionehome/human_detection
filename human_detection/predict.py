@@ -61,16 +61,17 @@ class HumanDetectionPredict(Node):
                 pos_y = self.log_odom_files[applicable_odom_index][1][1]
                 pos_z = self.log_odom_files[applicable_odom_index][1][2]
                 radian = self.log_odom_files[applicable_odom_index][1][3]
-                self.face_dataset.append({
-                    "face_image": image[int(p1.y):int(p2.y), int(p1.x):int(p2.x)],
-                    "x": x,
-                    "y": y,
-                    "z": z,
-                    "radian": radian,
-                    "pos_x": pos_x,
-                    "pos_y": pos_y,
-                    "pos_z": pos_z,
-                })
+                if not np.isnan(x) and not np.isnan(x) and not np.isnan(x):
+                    self.face_dataset.append({
+                        "face_image": image[int(p1.y):int(p2.y), int(p1.x):int(p2.x)],
+                        "x": x,
+                        "y": y,
+                        "z": z,
+                        "radian": radian,
+                        "pos_x": pos_x,
+                        "pos_y": pos_y,
+                        "pos_z": pos_z,
+                    })
 
         self.target_index = self.target_index + 1
         if self.target_index < len(self.log_image_files):
