@@ -1,16 +1,20 @@
 import glob
 import os
+import sys
 
+import cv2
+import pandas as pd
 import numpy as np
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 import joblib
+import matplotlib.pyplot as plt
+from sklearn.cluster import DBSCAN
 
-from lib.module import show_image_tile, calc_real_position, normalize_image
+from lib.module import calc_real_position, compare, show_image_tile
 
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log/")
-
 IMAGE_SIZE = 50
 
 
@@ -28,9 +32,11 @@ class HumanDetectionCalculation(Node):
         face_dataset = joblib.load(glob.glob("{}/predict/*".format(LOG_DIR))[0])
         # fig = plt.figure()
         # ax = fig.add_subplot(111, projection='3d')
-        face_images = np.zeros((len(face_dataset), IMAGE_SIZE, IMAGE_SIZE, 3), dtype=np.uint8)
+        # face_images = np.zeros((len(face_dataset), IMAGE_SIZE, IMAGE_SIZE, 3), dtype=np.uint8)
+        train = []
         for i, face_info in enumerate(face_dataset):
-            face_images[i] = normalize_image(face_info["face_image"], IMAGE_SIZE)
+            # face_images[i] = normalize_image(face_info["face_image"], IMAGE_SIZE)
+            train.append(cv2.resize(face_info["face_image"], (IMAGE_SIZE, IMAGE_SIZE), cv2.INTER_LINEAR))
             real_pos = calc_real_position(
                 face_info["x"],
                 face_info["y"],
@@ -40,14 +46,21 @@ class HumanDetectionCalculation(Node):
                 face_info["radian"]
             )
             print(real_pos)
-        # print(np.asarray(face_images).shape)
-        # cv2.imshow("window", face_info["face_image"])
-        # cv2.waitKey(1)
         # ax.scatter(real_pos[0], real_pos[1], real_pos[2])
         # plt.xlim([-5, 5])
         # plt.ylim([-5, 5])
-        show_image_tile([face_images])
         # plt.show()
+        distances = np.zeros((len(train), len(train)))
+        for i, img in enumerate(train):
+            distances[i, :] = [compare(img, f) for f in train]
+        plt.clf()
+        plt.hist(distances.flatten(), bins=50)
+        plt.title('Histogram of distance matrix')
+        plt.show()
+        cls = DBSCAN(metric='precomputed', min_samples=5, eps=0.9)
+        y = cls.fit_predict(distances)
+        show_image_tile([np.array(train)[y == uniq] for uniq in pd.Series(y).value_counts().index])
+        sys.exit(0)
 
 
 def main():

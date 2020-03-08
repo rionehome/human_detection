@@ -14,8 +14,14 @@ def numerical_sort(value):
 
 
 def normalize_image(image: np.ndarray, image_size: int):
-    image = cv2.resize(image, (image_size, image_size))
+    image = cv2.resize(image, (image_size, image_size), cv2.INTER_LINEAR)
     return image
+
+
+def compare(img, img2):
+    img = (img - img.mean()) / img.std()
+    img2 = (img2 - img2.mean()) / img2.std()
+    return np.mean(np.abs(img - img2))
 
 
 def to_quaternion_rad(w, z):
@@ -96,3 +102,20 @@ def show_image_tile(images_array: list, save_dir=None):
             plt.show()
         else:
             print("次元多し")
+
+
+def show_eight(imgs, title):
+    select_imgs = [imgs[np.random.choice(len(imgs))] for _ in range(8)]
+    _, ax = plt.subplots(2, 4, sharex='col', sharey='row', figsize=(20, 6))
+    plt.suptitle(title, size=20)
+    for i, img in enumerate(select_imgs):
+        ax[i // 4, i % 4].imshow(img)
+
+
+def show_four(imgs, title):
+    # select_imgs = [np.random.choice(imgs) for _ in range(4)]
+    select_imgs = [imgs[np.random.choice(len(imgs))] for _ in range(4)]
+    _, ax = plt.subplots(1, 4, sharex='col', sharey='row', figsize=(20, 3))
+    plt.suptitle(title, size=20)
+    for i, img in enumerate(select_imgs):
+        ax[i].imshow(img)
