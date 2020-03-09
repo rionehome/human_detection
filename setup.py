@@ -38,6 +38,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name, ['launch/human_detection.launch.py']),
         ('share/' + package_name, ['launch/vision_only.launch.py']),
+        ('share/' + package_name, ['launch/not_scan.launch.py']),
         ('lib/human_detection/lib',
          ['human_detection/lib/__init__.py',
           'human_detection/lib/module.py',

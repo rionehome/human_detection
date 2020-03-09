@@ -59,36 +59,37 @@ class HumanDetectionCalculation(Node):
                 ) for col in range(num_logs)
             ]
 
-        """
+        # """
         plt.clf()
         plt.hist(distance_matrix.flatten(), bins=50)
         plt.title('Histogram of distance matrix')
         plt.show()
-        """
-        cls = DBSCAN(metric='precomputed', min_samples=5, eps=0.5)
+        # """
+        cls = DBSCAN(metric='precomputed', min_samples=5, eps=1.5)
         labels = cls.fit_predict(distance_matrix)
         for uniq in pd.Series(labels).value_counts().index:
             print(uniq)
             show_image_tile([np.array(self.face_imgs)[labels == uniq]])
 
-        fig = plt.figure()
-        ax = Axes3D(fig)
-        for i in range(num_logs):
-            ax.scatter(self.real_positions[i][0], self.real_positions[i][1], self.real_positions[i][2])
-        plt.xlim([-5, 5])
-        plt.ylim([-5, 5])
-        plt.show()
-        plt.clf()
+        # fig = plt.figure()
+        # ax = Axes3D(fig)
+        # for i in range(num_logs):
+        #    ax.scatter(self.real_positions[i][0], self.real_positions[i][1], self.real_positions[i][2])
+        # plt.xlim([-5, 5])
+        # plt.ylim([-5, 5])
+        # plt.show()
+        # plt.clf()
 
         fig = plt.figure()
         ax = Axes3D(fig)
         for i in range(num_logs):
-            if labels[i] == -1:
+            if labels[i] == -1 and not len(set(labels)) == 1:
                 continue
             ax.scatter(self.real_positions[i][0], self.real_positions[i][1], self.real_positions[i][2],
                        color=LABEL_COLOR_SET[labels[i]])
-        plt.xlim([-5, 5])
-        plt.ylim([-5, 5])
+        ax.set_xlim(-5, 5)
+        ax.set_ylim(-5, 5)
+        ax.set_zlim(-3, 3)
         plt.show()
         sys.exit(0)
 

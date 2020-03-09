@@ -18,7 +18,7 @@ class HumanDetectionScanXYZ(Node):
         super().__init__(node_name)
         self.is_start = False
         self.count_files = 0
-        self.create_subscription(String, "/human_detection/command/scan", self.callback_command, 50)
+        self.create_subscription(String, "/human_detection/command/scan", self.callback_command, 10)
         self.create_subscription(
             PointCloud2, "/camera/aligned_depth_to_color/color/points", self.callback_point_cloud, 1)
         self.logger = Logger.Logger(os.path.join(LOG_DIR, "scan", "xyz"))

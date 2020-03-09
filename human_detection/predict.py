@@ -55,7 +55,7 @@ class HumanDetectionPredict(Node):
                 )
             )
         else:
-            print("finish")
+            print("finish", flush=True)
             self.count_complete = 4
             self.complete_predict()
 
@@ -67,21 +67,26 @@ class HumanDetectionPredict(Node):
         """
         if not len(msg.point1) == 0:
             # imageとの時間的な連結
-            applicable_xyz_index = \
-                np.where(self.log_xyz_files[:, 0] > self.log_image_files[self.target_face_index][0])[0][0]
-            applicable_odom_index = \
-                np.where(self.log_odom_files[:, 0] > self.log_image_files[self.target_face_index][0])[0][0]
+            applicable_xyz_index_array = np.where(
+                self.log_xyz_files[:, 0] > self.log_image_files[self.target_face_index][0]
+            )
+            xyz_index = -1 if applicable_xyz_index_array[0].shape[0] == 0 else applicable_xyz_index_array[0][0]
+
+            applicable_odom_index_array = np.where(
+                self.log_odom_files[:, 0] > self.log_image_files[self.target_face_index][0]
+            )
+            odom_index = -1 if applicable_odom_index_array[0].shape[0] == 0 else applicable_odom_index_array[0][0]
 
             # Todo 補完
             for p1, p2 in zip(msg.point1, msg.point2):
                 image = np.reshape(self.log_image_files[self.target_face_index][1], (IMAGE_HEIGHT, IMAGE_WIDTH, 3))
-                x = np.nanmean(self.log_xyz_files[applicable_xyz_index][1][0][int(p1.y):int(p2.y), int(p1.x):int(p2.x)])
-                y = np.nanmean(self.log_xyz_files[applicable_xyz_index][1][1][int(p1.y):int(p2.y), int(p1.x):int(p2.x)])
-                z = np.nanmean(self.log_xyz_files[applicable_xyz_index][1][2][int(p1.y):int(p2.y), int(p1.x):int(p2.x)])
-                pos_x = self.log_odom_files[applicable_odom_index][1][0]
-                pos_y = self.log_odom_files[applicable_odom_index][1][1]
-                pos_z = self.log_odom_files[applicable_odom_index][1][2]
-                radian = self.log_odom_files[applicable_odom_index][1][3]
+                x = np.nanmean(self.log_xyz_files[xyz_index][1][0][int(p1.y):int(p2.y), int(p1.x):int(p2.x)])
+                y = np.nanmean(self.log_xyz_files[xyz_index][1][1][int(p1.y):int(p2.y), int(p1.x):int(p2.x)])
+                z = np.nanmean(self.log_xyz_files[xyz_index][1][2][int(p1.y):int(p2.y), int(p1.x):int(p2.x)])
+                pos_x = self.log_odom_files[odom_index][1][0]
+                pos_y = self.log_odom_files[odom_index][1][1]
+                pos_z = self.log_odom_files[odom_index][1][2]
+                radian = self.log_odom_files[odom_index][1][3]
                 if not np.isnan(x) and not np.isnan(x) and not np.isnan(x):
                     self.face_dataset.append({
                         "face_image": image[int(p1.y):int(p2.y), int(p1.x):int(p2.x)],
@@ -98,14 +103,14 @@ class HumanDetectionPredict(Node):
         if self.target_face_index < len(self.log_image_files):
             self.pub_face_predictor.publish(Image(data=self.log_image_files[self.target_face_index][1]))
         else:
-            print("finish")
-            self.pub_gender_predictor.publish(
-                self.bridge.cv2_to_imgmsg(
-                    cv2.resize(self.face_dataset[0]["face_image"], (96, 96)), encoding="bgr8"
-                )
-            )
-            # self.count_complete = 4
-            # self.complete_predict()
+            print("finish", flush=True)
+            # self.pub_gender_predictor.publish(
+            #    self.bridge.cv2_to_imgmsg(
+            #        cv2.resize(self.face_dataset[0]["face_image"], (96, 96)), encoding="bgr8"
+            #    )
+            # )
+            self.count_complete = 4
+            self.complete_predict()
 
     def callback_command(self, msg: String):
         """

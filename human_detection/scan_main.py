@@ -1,4 +1,5 @@
 import os
+import time
 
 import rclpy
 from rclpy.node import Node
@@ -21,7 +22,7 @@ class HumanDetectionScanMain(Node):
     def callback_command(self, msg: String):
         if not msg.data == "start":
             return
-
+        time.sleep(1)
         # scanの開始
         self.pub_human_detection_command_scan.publish(String(data="xyz"))  # こいつだけメッセージが抜けることがある
         self.pub_human_detection_command_scan.publish(String(data="odometry"))

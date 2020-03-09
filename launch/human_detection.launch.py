@@ -5,17 +5,6 @@ from launch.actions import LogInfo
 
 def generate_launch_description():
     return LaunchDescription([
-        """
-        #############################################################
-        LogInfo(
-            msg="launch slam_gmapping"
-        ),
-        Node(
-            package='slam_gmapping',
-            node_executable='slam_gmapping',
-            output='screen'
-        ),
-        """,
         #############################################################
         LogInfo(
             msg="launch turn_robot"
@@ -56,6 +45,15 @@ def generate_launch_description():
         Node(
             package="face_predictor",
             node_executable="face_predictor",
+            output="screen"
+        ),
+        #############################################################
+        LogInfo(
+            msg="launch gender_predictor"
+        ),
+        Node(
+            package="gender_predictor",
+            node_executable="gender_predictor",
             output="screen"
         ),
         #############################################################
