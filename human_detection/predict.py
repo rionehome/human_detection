@@ -1,33 +1,63 @@
 import glob
 import os
-import re
 
+import cv2
+import numpy as np
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from rione_msgs.msg import PredictResult
 import joblib
+from cv_bridge import CvBridge
+
+from lib import Logger
+from lib.module import numerical_sort
 
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log/")
+IMAGE_HEIGHT = 480
+IMAGE_WIDTH = 640
 
 
 class HumanDetectionPredict(Node):
 
     def __init__(self, node_name: str):
         super().__init__(node_name)
-        self.log_filenames = []
-        self.target_index = 0
+        self.count_complete = 0
+        self.log_image_files = None
+        self.log_xyz_files = None
+        self.log_odom_files = None
+        self.face_dataset = []
+        self.target_face_index = 0
+        self.target_gender_index = 0
         self.create_subscription(String, "/human_detection/command", self.callback_command, 10)
         self.create_subscription(PredictResult, "/face_predictor/result", self.callback_face_predict_result, 10)
-        self.pub_image = self.create_publisher(Image, "/face_predictor/color/image", 10)
+        self.create_subscription(PredictResult, "/gender_predictor/result", self.callback_gender_predict_result, 10)
+        self.pub_human_detection_command = self.create_publisher(String, "/human_detection/command", 10)
+        self.pub_face_predictor = self.create_publisher(Image, "/face_predictor/color/image", 10)
+        self.pub_gender_predictor = self.create_publisher(Image, "/gender_predictor/color/image", 10)
+        self.logger = Logger.Logger(os.path.join(LOG_DIR, "predict"))
+        self.bridge = CvBridge()
 
-    @staticmethod
-    def numerical_sort(value):
-        numbers = re.compile(r'(\d+)')
-        parts = numbers.split(value)
-        parts[1::2] = map(int, parts[1::2])
-        return parts
+    def complete_predict(self):
+        if self.count_complete < 3:
+            return
+        self.logger.save(self.face_dataset)
+        self.pub_human_detection_command.publish(String(data="calculation"))
+
+    def callback_gender_predict_result(self, msg: PredictResult):
+        dict(self.face_dataset[self.target_gender_index]).setdefault("gender", msg.class_name)
+        self.target_gender_index = self.target_gender_index + 1
+        if self.target_gender_index < len(self.face_dataset):
+            self.pub_gender_predictor.publish(
+                self.bridge.cv2_to_imgmsg(
+                    cv2.resize(self.face_dataset[self.target_gender_index]["face_image"], (96, 96)), encoding="bgr8"
+                )
+            )
+        else:
+            print("finish", flush=True)
+            self.count_complete = 4
+            self.complete_predict()
 
     def callback_face_predict_result(self, msg: PredictResult):
         """
@@ -35,10 +65,52 @@ class HumanDetectionPredict(Node):
         :param msg:
         :return:
         """
-        self.target_index = self.target_index + 1
-        print(msg)
-        if self.target_index < len(self.log_filenames):
-            self.pub_image.publish(Image(data=joblib.load(self.log_filenames[self.target_index])[1]))
+        if not len(msg.point1) == 0:
+            # imageとの時間的な連結
+            applicable_xyz_index_array = np.where(
+                self.log_xyz_files[:, 0] > self.log_image_files[self.target_face_index][0]
+            )
+            xyz_index = -1 if applicable_xyz_index_array[0].shape[0] == 0 else applicable_xyz_index_array[0][0]
+
+            applicable_odom_index_array = np.where(
+                self.log_odom_files[:, 0] > self.log_image_files[self.target_face_index][0]
+            )
+            odom_index = -1 if applicable_odom_index_array[0].shape[0] == 0 else applicable_odom_index_array[0][0]
+
+            # Todo 補完
+            for p1, p2 in zip(msg.point1, msg.point2):
+                image = np.reshape(self.log_image_files[self.target_face_index][1], (IMAGE_HEIGHT, IMAGE_WIDTH, 3))
+                x = np.nanmean(self.log_xyz_files[xyz_index][1][0][int(p1.y):int(p2.y), int(p1.x):int(p2.x)])
+                y = np.nanmean(self.log_xyz_files[xyz_index][1][1][int(p1.y):int(p2.y), int(p1.x):int(p2.x)])
+                z = np.nanmean(self.log_xyz_files[xyz_index][1][2][int(p1.y):int(p2.y), int(p1.x):int(p2.x)])
+                pos_x = self.log_odom_files[odom_index][1][0]
+                pos_y = self.log_odom_files[odom_index][1][1]
+                pos_z = self.log_odom_files[odom_index][1][2]
+                radian = self.log_odom_files[odom_index][1][3]
+                if not np.isnan(x) and not np.isnan(x) and not np.isnan(x):
+                    self.face_dataset.append({
+                        "face_image": image[int(p1.y):int(p2.y), int(p1.x):int(p2.x)],
+                        "x": x,
+                        "y": y,
+                        "z": z,
+                        "radian": radian,
+                        "pos_x": pos_x,
+                        "pos_y": pos_y,
+                        "pos_z": pos_z,
+                    })
+
+        self.target_face_index = self.target_face_index + 1
+        if self.target_face_index < len(self.log_image_files):
+            self.pub_face_predictor.publish(Image(data=self.log_image_files[self.target_face_index][1]))
+        else:
+            print("finish", flush=True)
+            # self.pub_gender_predictor.publish(
+            #    self.bridge.cv2_to_imgmsg(
+            #        cv2.resize(self.face_dataset[0]["face_image"], (96, 96)), encoding="bgr8"
+            #    )
+            # )
+            self.count_complete = 4
+            self.complete_predict()
 
     def callback_command(self, msg: String):
         """
@@ -48,11 +120,25 @@ class HumanDetectionPredict(Node):
         """
         if not msg.data == "predict":
             return
-        print("load logs")
+        print("Loading...", flush=True)
+        image_list = []
+        xyz_list = []
+        odom_list = []
+
         # logファイルの読み込み
-        self.log_filenames = [filename for filename in
-                              sorted(glob.glob("{}/image/scan_*".format(LOG_DIR)), key=self.numerical_sort)]
-        self.pub_image.publish(Image(data=joblib.load(self.log_filenames[0])[1]))
+        for filename in sorted(glob.glob("{}/scan/image/*".format(LOG_DIR)), key=numerical_sort):
+            image_list.append(joblib.load(filename))
+        self.log_image_files = np.asarray(image_list)
+
+        for filename in sorted(glob.glob("{}/scan/xyz/*".format(LOG_DIR)), key=numerical_sort):
+            xyz_list.append(joblib.load(filename))
+        self.log_xyz_files = np.asarray(xyz_list)
+
+        for filename in sorted(glob.glob("{}/scan/odometry/*".format(LOG_DIR)), key=numerical_sort):
+            odom_list.append(joblib.load(filename))
+        self.log_odom_files = np.asarray(odom_list)
+
+        self.pub_face_predictor.publish(Image(data=self.log_image_files[0][1]))
 
 
 def main():

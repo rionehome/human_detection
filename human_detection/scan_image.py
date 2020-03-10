@@ -5,9 +5,10 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
-import joblib
 
-LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log/")
+from lib import Logger
+
+LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log")
 
 
 class HumanDetectionScanImage(Node):
@@ -18,16 +19,7 @@ class HumanDetectionScanImage(Node):
         self.count_files = 0
         self.create_subscription(String, "/human_detection/command/scan", self.callback_command, 50)
         self.create_subscription(Image, "/camera/color/image_raw", self.callback_color_image, 1)
-
-    def save(self, save_data: list, typename: str):
-        # TODO 処理速度削る
-        save_path = os.path.join(LOG_DIR, typename)
-        if not os.path.exists(save_path):  # ディレクトリがなければ
-            os.makedirs(save_path)
-        joblib.dump(save_data, os.path.join(save_path, "scan_{}.{}.npy".format(typename, self.count_files + 1)),
-                    compress=True)
-        save_data.clear()
-        self.count_files = self.count_files + 1
+        self.logger = Logger.Logger(os.path.join(LOG_DIR, "scan", "image"))
 
     def callback_command(self, msg: String):
         if msg.data == "image":
@@ -39,7 +31,7 @@ class HumanDetectionScanImage(Node):
     def callback_color_image(self, msg: Image):
         if not self.is_start:
             return
-        self.save([time.time(), msg.data], "image")
+        self.logger.save([time.time(), msg.data])
 
 
 def main():
