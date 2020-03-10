@@ -12,11 +12,13 @@ import joblib
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import DBSCAN
+from sklearn.cluster import KMeans
 
-from lib.module import calc_real_position, compare, show_image_tile
+from lib.module import calc_real_position, compare_point, compare_image, show_image_tile
 
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log/")
-IMAGE_SIZE = 50
+SAMPLE_IMAGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample_image/")
+IMAGE_SIZE = 96
 LABEL_COLOR_SET = {-1: "black", 0: "red", 1: "green", 2: "blue", 3: "yellow", 4: "purple", 5: "blown"}
 
 
@@ -34,7 +36,6 @@ class HumanDetectionCalculation(Node):
         print("Loading...", flush=True)
         # logファイルの読み込み
         face_logs = joblib.load(glob.glob("{}/predict/*".format(LOG_DIR))[0])
-        num_logs = len(face_logs)
 
         for log in face_logs:
             self.face_imgs.append(cv2.resize(log["face_image"], (IMAGE_SIZE, IMAGE_SIZE), cv2.INTER_LINEAR))
@@ -47,6 +48,29 @@ class HumanDetectionCalculation(Node):
                 log["radian"]
             ))
 
+        self.face_imgs.append(
+            cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "not_person.png")), cv2.COLOR_BGR2RGB))
+
+        num_logs = len(self.face_imgs)
+
+        # クラスタリング下準備
+        distance_matrix = np.zeros((num_logs, num_logs))
+        for row in range(num_logs):
+            distance_matrix[row, :] = [
+                compare_image(
+                    self.face_imgs[row],
+                    self.face_imgs[col],
+                ) for col in range(num_logs)
+            ]
+
+        cls = KMeans(n_clusters=2)
+        labels = cls.fit_predict(distance_matrix)
+        show_image_tile([np.array(self.face_imgs)[labels != labels[-1]]])
+        for uniq in pd.Series(labels).value_counts().index:
+            print(uniq)
+            show_image_tile([np.array(self.face_imgs)[labels == uniq]])
+
+        """
         # クラスタリング下準備
         distance_matrix = np.zeros((num_logs, num_logs))
         for row in range(num_logs):
@@ -59,12 +83,12 @@ class HumanDetectionCalculation(Node):
                 ) for col in range(num_logs)
             ]
 
-        # """
+        #
         plt.clf()
         plt.hist(distance_matrix.flatten(), bins=50)
         plt.title('Histogram of distance matrix')
         plt.show()
-        # """
+        # 
         cls = DBSCAN(metric='precomputed', min_samples=5, eps=1.5)
         labels = cls.fit_predict(distance_matrix)
         for uniq in pd.Series(labels).value_counts().index:
@@ -92,6 +116,7 @@ class HumanDetectionCalculation(Node):
         ax.set_zlim(-3, 3)
         plt.show()
         sys.exit(0)
+        """
 
 
 def main():

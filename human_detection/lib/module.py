@@ -18,11 +18,15 @@ def normalize_image(image: np.ndarray, image_size: int):
     return image
 
 
-def compare(row_img: np.ndarray, row_pos: tuple, col_img: np.ndarray, col_pos: tuple):
+def compare_point(row_pos: tuple, col_pos: tuple):
+    pos_distance = math.sqrt(np.sum(np.abs(np.asarray(row_pos) - np.asarray(col_pos)) ** 2))
+    return pos_distance
+
+
+def compare_image(row_img: np.ndarray, col_img: np.ndarray):
     row_img = (row_img - row_img.mean()) / row_img.std()
     col_img = (col_img - col_img.mean()) / col_img.std()
-    pos_distance = math.sqrt(np.sum(np.abs(np.asarray(row_pos) - np.asarray(col_pos)) ** 2))
-    return np.mean(np.abs(row_img - col_img)) + pos_distance
+    return np.mean(np.abs(row_img - col_img))
 
 
 def to_quaternion_rad(w, z):
