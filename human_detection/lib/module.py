@@ -1,6 +1,7 @@
 import os
 import re
 import math
+
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
@@ -54,7 +55,7 @@ def convert_unit_image(image: np.ndarray):
     return image
 
 
-def show_image_tile(images_array: list, save_dir=None):
+def show_image_tile(images_array: list, save_dir=None, title=""):
     num_exist_files = 0
     save_path = None
     if save_dir is not None:
@@ -70,14 +71,18 @@ def show_image_tile(images_array: list, save_dir=None):
             if display_img.shape[-1] == 3:
                 # color
                 if save_dir is None:
+                    plt.title(title)
                     plt.imshow(display_img)
                 else:
+                    plt.title(title)
                     plt.imsave(os.path.join(save_path, "{}.png".format(num_exist_files + images_index)), display_img)
             else:
                 # gray
                 if save_dir is None:
+                    plt.title(title)
                     plt.imshow(display_img, cmap="gray")
                 else:
+                    plt.title(title)
                     plt.imsave(os.path.join(save_path, "{}.png".format(num_exist_files + images_index)), display_img,
                                cmap="gray")
             plt.show()
@@ -90,8 +95,10 @@ def show_image_tile(images_array: list, save_dir=None):
                     tile[i // tile_length, i % tile_length] = convert_unit_image(images[i])
                 display_img = cv2.vconcat([cv2.hconcat(h) for h in tile])
                 if save_dir is None:
+                    plt.title(title)
                     plt.imshow(display_img, cmap="gray")
                 else:
+                    plt.title(title)
                     plt.imsave(os.path.join(save_path, "{}.png".format(num_exist_files + images_index)), display_img,
                                cmap="gray")
             else:
@@ -101,8 +108,10 @@ def show_image_tile(images_array: list, save_dir=None):
                     tile[i // tile_length, i % tile_length] = convert_unit_image(images[i])
                 display_img = cv2.vconcat([cv2.hconcat(h) for h in tile])
                 if save_dir is None:
+                    plt.title(title)
                     plt.imshow(display_img)
                 else:
+                    plt.title(title)
                     plt.imsave(os.path.join(save_path, "{}.png".format(num_exist_files + images_index)), display_img)
             plt.show()
         else:
