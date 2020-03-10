@@ -36,7 +36,7 @@ class HumanDetectionPredict(Node):
         self.pub_human_detection_command = self.create_publisher(String, "/human_detection/command", 10)
         self.pub_face_predictor = self.create_publisher(Image, "/face_predictor/color/image", 10)
         self.pub_gender_predictor = self.create_publisher(Image, "/gender_predictor/color/image", 10)
-        self.logger = Logger.Logger(os.path.join(LOG_DIR, "predict"))
+        self.logger = Logger.Logger(os.path.join(LOG_DIR, "sampling"))
         self.bridge = CvBridge()
 
     def complete_predict(self):
@@ -118,7 +118,7 @@ class HumanDetectionPredict(Node):
         :param msg:
         :return:
         """
-        if not msg.data == "predict":
+        if not msg.data == "sampling":
             return
         print("Loading...", flush=True)
         image_list = []

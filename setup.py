@@ -30,7 +30,7 @@ setup(
         'human_detection.scan_image',
         'human_detection.scan_odometry',
         'human_detection.scan_xyz',
-        'human_detection.predict',
+        'human_detection.sampling',
         'human_detection.calculation',
     ],
     data_files=[
@@ -59,7 +59,7 @@ setup(
             'scan_image = human_detection.scan_image:main',
             'scan_odometry = human_detection.scan_odometry:main',
             'scan_xyz = human_detection.scan_xyz:main',
-            'predict = human_detection.predict:main',
+            'sampling = human_detection.sampling:main',
             'calculation = human_detection.calculation:main',
         ],
     },

@@ -49,7 +49,7 @@ def generate_launch_description():
         ),
         Node(
             package="human_detection",
-            node_executable="predict",
+            node_executable="sampling",
             output="screen"
         ),
         Node(

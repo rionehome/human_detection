@@ -35,7 +35,7 @@ class HumanDetectionCalculation(Node):
             return
         print("Loading...", flush=True)
         # logファイルの読み込み
-        face_logs = joblib.load(glob.glob("{}/predict/*".format(LOG_DIR))[0])
+        face_logs = joblib.load(glob.glob("{}/sampling/*".format(LOG_DIR))[0])
 
         for log in face_logs:
             self.sampled_imgs.append(cv2.resize(log["face_image"], (IMAGE_SIZE, IMAGE_SIZE), cv2.INTER_LINEAR))
