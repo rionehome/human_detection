@@ -36,7 +36,7 @@ class HumanDetectionScanMain(Node):
             return
         print("データ取得終了", flush=True)
         self.pub_human_detection_command_scan.publish(String(data="stop"))
-        self.pub_human_detection_command.publish(String(data="predict"))
+        self.pub_human_detection_command.publish(String(data="sampling"))
 
 
 def main():

@@ -1,7 +1,6 @@
 import glob
 import os
 
-import cv2
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -19,7 +18,7 @@ IMAGE_HEIGHT = 480
 IMAGE_WIDTH = 640
 
 
-class HumanDetectionPredict(Node):
+class HumanDetectionSampling(Node):
 
     def __init__(self, node_name: str):
         super().__init__(node_name)
@@ -29,35 +28,12 @@ class HumanDetectionPredict(Node):
         self.log_odom_files = None
         self.face_dataset = []
         self.target_face_index = 0
-        self.target_gender_index = 0
         self.create_subscription(String, "/human_detection/command", self.callback_command, 10)
         self.create_subscription(PredictResult, "/face_predictor/result", self.callback_face_predict_result, 10)
-        self.create_subscription(PredictResult, "/gender_predictor/result", self.callback_gender_predict_result, 10)
-        self.pub_human_detection_command = self.create_publisher(String, "/human_detection/command", 10)
+        self.pub_command = self.create_publisher(String, "/human_detection/command", 10)
         self.pub_face_predictor = self.create_publisher(Image, "/face_predictor/color/image", 10)
-        self.pub_gender_predictor = self.create_publisher(Image, "/gender_predictor/color/image", 10)
-        self.logger = Logger.Logger(os.path.join(LOG_DIR, "predict"))
+        self.logger = Logger.Logger(os.path.join(LOG_DIR, "sampling"))
         self.bridge = CvBridge()
-
-    def complete_predict(self):
-        if self.count_complete < 3:
-            return
-        self.logger.save(self.face_dataset)
-        self.pub_human_detection_command.publish(String(data="calculation"))
-
-    def callback_gender_predict_result(self, msg: PredictResult):
-        dict(self.face_dataset[self.target_gender_index]).setdefault("gender", msg.class_name)
-        self.target_gender_index = self.target_gender_index + 1
-        if self.target_gender_index < len(self.face_dataset):
-            self.pub_gender_predictor.publish(
-                self.bridge.cv2_to_imgmsg(
-                    cv2.resize(self.face_dataset[self.target_gender_index]["face_image"], (96, 96)), encoding="bgr8"
-                )
-            )
-        else:
-            print("finish", flush=True)
-            self.count_complete = 4
-            self.complete_predict()
 
     def callback_face_predict_result(self, msg: PredictResult):
         """
@@ -88,8 +64,12 @@ class HumanDetectionPredict(Node):
                 pos_z = self.log_odom_files[odom_index][1][2]
                 radian = self.log_odom_files[odom_index][1][3]
                 if not np.isnan(x) and not np.isnan(x) and not np.isnan(x):
+                    ex_p1_x = 0 if int(p1.x - 10) < 0 else int(p1.x - 10)
+                    ex_p1_y = 0 if int(p1.y - 10) < 0 else int(p1.y - 10)
+                    ex_p2_x = IMAGE_WIDTH - 1 if int(p2.x + 10) > IMAGE_WIDTH - 1 else int(p2.x + 10)
+                    ex_p2_y = IMAGE_HEIGHT - 1 if int(p2.y + 10) > IMAGE_HEIGHT - 1 else int(p2.y + 10)
                     self.face_dataset.append({
-                        "face_image": image[int(p1.y):int(p2.y), int(p1.x):int(p2.x)],
+                        "face_image": image[ex_p1_y:ex_p2_y, ex_p1_x:ex_p2_x],
                         "x": x,
                         "y": y,
                         "z": z,
@@ -104,13 +84,8 @@ class HumanDetectionPredict(Node):
             self.pub_face_predictor.publish(Image(data=self.log_image_files[self.target_face_index][1]))
         else:
             print("finish", flush=True)
-            # self.pub_gender_predictor.publish(
-            #    self.bridge.cv2_to_imgmsg(
-            #        cv2.resize(self.face_dataset[0]["face_image"], (96, 96)), encoding="bgr8"
-            #    )
-            # )
-            self.count_complete = 4
-            self.complete_predict()
+            self.logger.save(self.face_dataset)
+            self.pub_command.publish(String(data="calculation"))
 
     def callback_command(self, msg: String):
         """
@@ -118,8 +93,9 @@ class HumanDetectionPredict(Node):
         :param msg:
         :return:
         """
-        if not msg.data == "predict":
+        if not msg.data == "sampling":
             return
+        self.logger.clear()
         print("Loading...", flush=True)
         image_list = []
         xyz_list = []
@@ -143,7 +119,7 @@ class HumanDetectionPredict(Node):
 
 def main():
     rclpy.init()
-    node = HumanDetectionPredict("HumanDetectionPredict")
+    node = HumanDetectionSampling("HumanDetectionSampling")
     rclpy.spin(node)
 
 

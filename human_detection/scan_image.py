@@ -23,6 +23,7 @@ class HumanDetectionScanImage(Node):
 
     def callback_command(self, msg: String):
         if msg.data == "image":
+            self.logger.clear()
             self.is_start = True
             print("imageデータ取得開始", flush=True)
         elif msg.data == "stop":

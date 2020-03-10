@@ -40,7 +40,7 @@ def calc_real_position(x, y, z, pos_x, pos_y, pos_radian):
     relative_z = y
     result_x = (relative_x * math.cos(pos_radian) - relative_y * math.sin(pos_radian)) + pos_x
     result_y = (relative_x * math.sin(pos_radian) + relative_y * math.cos(pos_radian)) + pos_y
-    result_z = relative_z
+    result_z = -relative_z
     return result_x, result_y, result_z
 
 
