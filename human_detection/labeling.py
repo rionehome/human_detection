@@ -2,17 +2,16 @@ import glob
 import os
 
 import cv2
+from cv_bridge import CvBridge
 import rclpy
 from rclpy.node import Node
+from rione_msgs.msg import PredictResult
+from sensor_msgs.msg import Image
 from std_msgs.msg import String
 import joblib
 
-from lib.module import calc_real_position
-
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log/")
-SAMPLE_IMAGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample_image/")
 IMAGE_SIZE = 96
-LABEL_COLOR_SET = {-1: "black", 0: "red", 1: "green", 2: "blue", 3: "yellow", 4: "purple", 5: "blown"}
 
 
 class HumanDetectionLabeling(Node):
@@ -20,26 +19,43 @@ class HumanDetectionLabeling(Node):
     def __init__(self, node_name: str):
         super().__init__(node_name)
         self.create_subscription(String, "/human_detection/command", self.callback_command, 10)
-        self.real_positions = []
-        self.sampled_imgs = []
+        self.create_subscription(PredictResult, "/gender_predictor/result", self.callback_gender_predict_result, 10)
+        self.pub_gender_predictor = self.create_publisher(Image, "/gender_predictor/color/image", 10)
+        self.bridge = CvBridge()
+        self.iterator_indexes = [0, 0]  # 0:face_id, 1:image_index
+        self.face_infos = []
 
     def callback_command(self, msg):
         if not msg.data == "labeling":
             return
         print("Loading...", flush=True)
         # logファイルの読み込み
-        face_logs = joblib.load(glob.glob("{}/calculation/*".format(LOG_DIR))[0])
+        self.face_infos = joblib.load(glob.glob("{}/calculation/*".format(LOG_DIR))[0])
 
-        for log in face_logs:
-            self.sampled_imgs.append(cv2.resize(log["face_image"], (IMAGE_SIZE, IMAGE_SIZE), cv2.INTER_LINEAR))
-            self.real_positions.append(calc_real_position(
-                log["x"],
-                log["y"],
-                log["z"],
-                log["pos_x"],
-                log["pos_y"],
-                log["radian"]
-            ))
+        self.pub_gender_predictor.publish(
+            self.bridge.cv2_to_imgmsg(
+                self.face_infos[self.iterator_indexes[0]]["face_image"][self.iterator_indexes[1]],
+                encoding="bgr8"
+            )
+        )
+
+    def callback_gender_predict_result(self, msg: PredictResult):
+        print(msg.class_name.data, flush=True)
+        if self.iterator_indexes[1] + 1 < len(self.face_infos[self.iterator_indexes[0]]["face_image"]):
+            self.iterator_indexes[1] = self.iterator_indexes[1] + 1
+        elif self.iterator_indexes[0] + 1 < len(self.face_infos):
+            self.iterator_indexes[0] = self.iterator_indexes[0] + 1
+            self.iterator_indexes[1] = 0
+        else:
+            print("finish", flush=True)
+            return
+
+        self.pub_gender_predictor.publish(
+            self.bridge.cv2_to_imgmsg(
+                self.face_infos[self.iterator_indexes[0]]["face_image"][self.iterator_indexes[1]],
+                encoding="bgr8"
+            )
+        )
 
 
 def main():

@@ -36,4 +36,9 @@ def generate_launch_description():
             node_executable="calculation",
             output="screen"
         ),
+        Node(
+            package="human_detection",
+            node_executable="labeling",
+            output="screen"
+        ),
     ])

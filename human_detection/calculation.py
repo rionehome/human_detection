@@ -28,6 +28,7 @@ class HumanDetectionCalculation(Node):
         np.set_printoptions(suppress=True)
         super().__init__(node_name)
         self.create_subscription(String, "/human_detection/command", self.callback_command, 10)
+        self.pub_command = self.create_publisher(String, "/human_detection/command", 10)
         self.real_positions = []
         self.sampled_imgs = []
         self.logger = Logger.Logger(os.path.join(LOG_DIR, "calculation"))
@@ -53,7 +54,7 @@ class HumanDetectionCalculation(Node):
 
         # ノイズの挿入
         self.sampled_imgs.append(
-            cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "not_person.png")), cv2.COLOR_BGR2RGB)  # 人為的ノイズの
+            cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "not_person.png")), cv2.COLOR_BGR2RGB)
         )
         self.real_positions.append((0, 0, 0))
 
@@ -97,6 +98,22 @@ class HumanDetectionCalculation(Node):
 
         cls = DBSCAN(metric='precomputed', min_samples=5, eps=0.5)
         face_labels = cls.fit_predict(distance_matrix)
+
+        face_infos = []
+        for uniq in np.unique(face_labels):
+            if uniq == -1:
+                continue
+            average_point = np.average(np.array(face_real_positions)[face_labels == uniq], axis=0)
+            face_infos.append({
+                "face_image": np.array(face_imgs)[face_labels == uniq],
+                "position": average_point
+            })
+            print(average_point, flush=True)
+        print("finish", flush=True)
+        self.logger.save(face_infos)
+        self.pub_command.publish(String(data="labeling"))
+
+        # 描画
         for uniq in np.unique(face_labels):
             show_image_tile([np.array(face_imgs)[face_labels == uniq]], title="label: " + str(uniq))
 
@@ -114,13 +131,11 @@ class HumanDetectionCalculation(Node):
         ax = Axes3D(fig)
         for uniq in np.unique(face_labels):
             face_points = np.array(face_real_positions)[face_labels == uniq]
-            average_list = np.average(face_points, axis=0)
+            average_point = np.average(face_points, axis=0)
             ax.scatter(face_points[:, 0], face_points[:, 1], face_points[:, 2],
                        color=LABEL_COLOR_SET[-1 if uniq == -1 else uniq % 5])
-            ax.scatter(average_list[0], average_list[1], average_list[2], marker="x", s=300,
+            ax.scatter(average_point[0], average_point[1], average_point[2], marker="x", s=300,
                        color=LABEL_COLOR_SET[-1 if uniq == -1 else uniq % 5])
-            print(average_list, flush=True)
-
         ax.set_xlim(-5, 5)
         ax.set_ylim(-5, 5)
         ax.set_zlim(-3, 3)

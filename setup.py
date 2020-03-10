@@ -32,6 +32,7 @@ setup(
         'human_detection.scan_xyz',
         'human_detection.sampling',
         'human_detection.calculation',
+        'human_detection.labeling',
     ],
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
@@ -60,6 +61,7 @@ setup(
             'scan_xyz = human_detection.scan_xyz:main',
             'sampling = human_detection.sampling:main',
             'calculation = human_detection.calculation:main',
+            'labeling = human_detection.labeling:main',
         ],
     },
 )
