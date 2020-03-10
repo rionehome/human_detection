@@ -3,7 +3,6 @@ import os
 import sys
 
 import cv2
-import pandas as pd
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -67,13 +66,13 @@ class HumanDetectionCalculation(Node):
             ]
 
         cls = KMeans(n_clusters=2)
-        person_labels = cls.fit_predict(distance_matrix)
-        show_image_tile([np.array(self.sampled_imgs)[person_labels != person_labels[-1]]], title="face")
-        show_image_tile([np.array(self.sampled_imgs)[person_labels == person_labels[-1]]], title="not_face")
+        labels = cls.fit_predict(distance_matrix)
+        show_image_tile([np.array(self.sampled_imgs)[labels != labels[-1]]], title="face")
+        show_image_tile([np.array(self.sampled_imgs)[labels == labels[-1]]], title="not_face")
 
         # 物体の排除
-        face_imgs = np.array(self.sampled_imgs)[person_labels != person_labels[-1]]
-        face_real_positions = np.array(self.real_positions)[person_labels != person_labels[-1]]
+        face_imgs = np.array(self.sampled_imgs)[labels != labels[-1]]
+        face_real_positions = np.array(self.real_positions)[labels != labels[-1]]
         num_face = face_real_positions.shape[0]
         # self.sampled_imgs.pop(-1)  # 人為的ノイズの削除
 
@@ -93,9 +92,9 @@ class HumanDetectionCalculation(Node):
         plt.show()
 
         cls = DBSCAN(metric='precomputed', min_samples=5, eps=0.5)
-        labels = cls.fit_predict(distance_matrix)
-        for uniq in pd.Series(labels).value_counts().index:
-            show_image_tile([np.array(face_imgs)[labels == uniq]], title="label: " + str(uniq))
+        face_labels = cls.fit_predict(distance_matrix)
+        for uniq in np.unique(face_labels):
+            show_image_tile([np.array(face_imgs)[face_labels == uniq]], title="label: " + str(uniq))
 
         fig = plt.figure()
         ax = Axes3D(fig)
@@ -111,7 +110,7 @@ class HumanDetectionCalculation(Node):
         ax = Axes3D(fig)
         for i in range(num_face):
             ax.scatter(face_real_positions[i][0], face_real_positions[i][1], face_real_positions[i][2],
-                       color=LABEL_COLOR_SET[-1 if labels[i] == -1 else labels[i] % 5])
+                       color=LABEL_COLOR_SET[-1 if face_labels[i] == -1 else face_labels[i] % 5])
         ax.set_xlim(-5, 5)
         ax.set_ylim(-5, 5)
         ax.set_zlim(-3, 3)
