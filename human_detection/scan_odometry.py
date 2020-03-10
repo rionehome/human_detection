@@ -24,6 +24,7 @@ class HumanDetectionScanOdometry(Node):
 
     def callback_command(self, msg: String):
         if msg.data == "odometry":
+            self.logger.clear()
             self.is_start = True
             print("odometryデータ取得開始", flush=True)
         elif msg.data == "stop":

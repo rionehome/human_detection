@@ -25,6 +25,7 @@ class HumanDetectionScanXYZ(Node):
 
     def callback_command(self, msg: String):
         if msg.data == "xyz":
+            self.logger.clear()
             self.is_start = True
             print("xyzデータ取得開始", flush=True)
         elif msg.data == "stop":

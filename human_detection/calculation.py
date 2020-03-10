@@ -13,6 +13,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
 
+from lib import Logger
 from lib.module import calc_real_position, compare_point, compare_image, show_image_tile
 
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log/")
@@ -24,14 +25,17 @@ LABEL_COLOR_SET = {-1: "black", 0: "red", 1: "green", 2: "blue", 3: "yellow", 4:
 class HumanDetectionCalculation(Node):
 
     def __init__(self, node_name: str):
+        np.set_printoptions(suppress=True)
         super().__init__(node_name)
         self.create_subscription(String, "/human_detection/command", self.callback_command, 10)
         self.real_positions = []
         self.sampled_imgs = []
+        self.logger = Logger.Logger(os.path.join(LOG_DIR, "calculation"))
 
     def callback_command(self, msg):
         if not msg.data == "calculation":
             return
+        self.logger.clear()
         print("Loading...", flush=True)
         # logファイルの読み込み
         face_logs = joblib.load(glob.glob("{}/sampling/*".format(LOG_DIR))[0])
@@ -108,9 +112,15 @@ class HumanDetectionCalculation(Node):
 
         fig = plt.figure()
         ax = Axes3D(fig)
-        for i in range(num_face):
-            ax.scatter(face_real_positions[i][0], face_real_positions[i][1], face_real_positions[i][2],
-                       color=LABEL_COLOR_SET[-1 if face_labels[i] == -1 else face_labels[i] % 5])
+        for uniq in np.unique(face_labels):
+            face_points = np.array(face_real_positions)[face_labels == uniq]
+            average_list = np.average(face_points, axis=0)
+            ax.scatter(face_points[:, 0], face_points[:, 1], face_points[:, 2],
+                       color=LABEL_COLOR_SET[-1 if uniq == -1 else uniq % 5])
+            ax.scatter(average_list[0], average_list[1], average_list[2], marker="x", s=300,
+                       color=LABEL_COLOR_SET[-1 if uniq == -1 else uniq % 5])
+            print(average_list, flush=True)
+
         ax.set_xlim(-5, 5)
         ax.set_ylim(-5, 5)
         ax.set_zlim(-3, 3)

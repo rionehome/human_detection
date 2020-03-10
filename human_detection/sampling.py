@@ -91,6 +91,7 @@ class HumanDetectionSampling(Node):
         """
         if not msg.data == "sampling":
             return
+        self.logger.clear()
         print("Loading...", flush=True)
         image_list = []
         xyz_list = []
