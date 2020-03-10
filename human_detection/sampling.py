@@ -64,8 +64,12 @@ class HumanDetectionSampling(Node):
                 pos_z = self.log_odom_files[odom_index][1][2]
                 radian = self.log_odom_files[odom_index][1][3]
                 if not np.isnan(x) and not np.isnan(x) and not np.isnan(x):
+                    ex_p1_x = 0 if int(p1.x - 10) < 0 else int(p1.x - 10)
+                    ex_p1_y = 0 if int(p1.y - 10) < 0 else int(p1.y - 10)
+                    ex_p2_x = IMAGE_WIDTH - 1 if int(p2.x + 10) > IMAGE_WIDTH - 1 else int(p2.x + 10)
+                    ex_p2_y = IMAGE_HEIGHT - 1 if int(p2.y + 10) > IMAGE_HEIGHT - 1 else int(p2.y + 10)
                     self.face_dataset.append({
-                        "face_image": image[int(p1.y):int(p2.y), int(p1.x):int(p2.x)],
+                        "face_image": image[ex_p1_y:ex_p2_y, ex_p1_x:ex_p2_x],
                         "x": x,
                         "y": y,
                         "z": z,

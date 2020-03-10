@@ -54,7 +54,7 @@ class HumanDetectionCalculation(Node):
 
         # ノイズの挿入
         self.sampled_imgs.append(
-            cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "not_person.png")), cv2.COLOR_BGR2RGB)
+            cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "not_face.png")), cv2.COLOR_BGR2RGB)
         )
         self.real_positions.append((0, 0, 0))
 
