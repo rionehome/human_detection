@@ -79,13 +79,23 @@ def show_image_tile(images_array: list, save_dir=None, title=""):
 
     for images_index, images in enumerate(images_array):
         images = np.asarray(images)
-        if len(images.shape) == 3:
+        if len(images.shape) == 2:
+            display_img = convert_unit_image(images)
+            # gray
+            if save_dir is None:
+                plt.imshow(display_img, cmap="gray")
+                plt.show()
+            else:
+                plt.imsave(os.path.join(save_path, "{}.png".format(num_exist_files + images_index)), display_img,
+                           cmap="gray")
+        elif len(images.shape) == 3:
             display_img = convert_unit_image(images)
             if display_img.shape[-1] == 3:
                 # color
                 if save_dir is None:
                     plt.title(title)
                     plt.imshow(display_img)
+                    plt.show()
                 else:
                     plt.title(title)
                     plt.imsave(os.path.join(save_path, "{}.png".format(num_exist_files + images_index)), display_img)
@@ -94,11 +104,11 @@ def show_image_tile(images_array: list, save_dir=None, title=""):
                 if save_dir is None:
                     plt.title(title)
                     plt.imshow(display_img, cmap="gray")
+                    plt.show()
                 else:
                     plt.title(title)
                     plt.imsave(os.path.join(save_path, "{}.png".format(num_exist_files + images_index)), display_img,
                                cmap="gray")
-            plt.show()
         elif len(images.shape) == 4:
             tile_length = int(math.sqrt(images.shape[0])) + 1
             if images.shape[-1] == 1:
@@ -110,6 +120,7 @@ def show_image_tile(images_array: list, save_dir=None, title=""):
                 if save_dir is None:
                     plt.title(title)
                     plt.imshow(display_img, cmap="gray")
+                    plt.show()
                 else:
                     plt.title(title)
                     plt.imsave(os.path.join(save_path, "{}.png".format(num_exist_files + images_index)), display_img,
@@ -123,9 +134,9 @@ def show_image_tile(images_array: list, save_dir=None, title=""):
                 if save_dir is None:
                     plt.title(title)
                     plt.imshow(display_img)
+                    plt.show()
                 else:
                     plt.title(title)
                     plt.imsave(os.path.join(save_path, "{}.png".format(num_exist_files + images_index)), display_img)
-            plt.show()
         else:
             print("次元多し")

@@ -1,8 +1,8 @@
+import collections
 import glob
 import os
 
 import cv2
-import statistics
 from cv_bridge import CvBridge
 import rclpy
 from rclpy.node import Node
@@ -57,11 +57,14 @@ class HumanDetectionLabeling(Node):
         else:
             print("finish", flush=True)
             for i in range(len(self.face_infos)):
-                print(statistics.mode(self.face_infos[i]["genders"]), flush=True)
+                print(collections.Counter(self.face_infos[i]["genders"]).most_common()[0][0], flush=True)
                 human_state = "standing" if self.face_infos[i]["position"][2] > 0.5 else "sitting"
                 cv2.imwrite(
-                    os.path.join(LOG_DIR, "labeling",
-                                 "{}-{}-{}.png".format(i, statistics.mode(self.face_infos[i]["genders"]), human_state)),
+                    os.path.join(
+                        LOG_DIR, "labeling", "{}-{}-{}.png".format(
+                            i, collections.Counter(
+                                self.face_infos[i]["genders"]).most_common()[0][0], human_state)
+                    ),
                     self.face_infos[i]["face_image"][0][:, :, [2, 1, 0]]
                 )
             return

@@ -11,13 +11,11 @@ import joblib
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import DBSCAN
-from sklearn.cluster import KMeans
 
 from lib import Logger
-from lib.module import calc_real_position, compare_point, compare_image, show_image_tile, compare_image_dice
+from lib.module import calc_real_position, compare_point, compare_image, show_image_tile
 
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log/")
-SAMPLE_IMAGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample_image/")
 IMAGE_SIZE = 96
 LABEL_COLOR_SET = {-1: "black", 0: "red", 1: "green", 2: "blue", 3: "yellow", 4: "purple", 5: "blown"}
 
@@ -52,54 +50,19 @@ class HumanDetectionCalculation(Node):
                 log["radian"]
             ))
 
-        # ノイズの挿入
-        not_face_img = cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "not_face.png")), cv2.COLOR_BGR2RGB)
-        not_face_img2 = cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "not_face2.png")), cv2.COLOR_BGR2RGB)
-        face_img = cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "face.png")), cv2.COLOR_BGR2RGB)
-        face_img2 = cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "face2.png")), cv2.COLOR_BGR2RGB)
-        self.sampled_imgs.append(not_face_img2)
-        self.real_positions.append((0, 0, 0))
-
         num_sample = len(self.sampled_imgs)
 
-        # k-means下準備
-        """
+        # dbscan下準備
         distance_matrix = np.zeros((num_sample, num_sample))
         for row in range(num_sample):
             distance_matrix[row, :] = [
-                compare_image(
-                    self.sampled_imgs[row],
-                    self.sampled_imgs[col],
-                ) for col in range(num_sample)
-            ]
-        """
-        distance_matrix = np.zeros((num_sample, 2))
-        for row in range(num_sample):
-            distance_matrix[row, 0] = compare_image(self.sampled_imgs[row], face_img)
-            distance_matrix[row, 1] = compare_image(self.sampled_imgs[row], not_face_img)
-
-        cls = KMeans(n_clusters=2)
-        labels = cls.fit_predict(distance_matrix)
-        show_image_tile([np.array(self.sampled_imgs)[labels != labels[-1]]], title="face")
-        show_image_tile([np.array(self.sampled_imgs)[labels == labels[-1]]], title="not_face")
-
-        # 物体の排除
-        face_imgs = np.array(self.sampled_imgs)[labels == labels[-1]]
-        face_real_positions = np.array(self.real_positions)[labels == labels[-1]]
-        num_face = face_real_positions.shape[0]
-        # self.sampled_imgs.pop(-1)  # 人為的ノイズの削除
-
-        # dbscanグ下準備
-        distance_matrix = np.zeros((num_face, num_face))
-        for row in range(num_face):
-            distance_matrix[row, :] = [
                 compare_point(
-                    face_real_positions[row],
-                    face_real_positions[col]
-                ) + compare_image(
-                    face_imgs[row],
-                    face_imgs[col]
-                ) for col in range(num_face)
+                    self.real_positions[row],
+                    self.real_positions[col]
+                ) * 0.1 + compare_image(
+                    self.sampled_imgs[row],
+                    self.sampled_imgs[col]
+                ) for col in range(num_sample)
             ]
 
         plt.clf()
@@ -107,16 +70,16 @@ class HumanDetectionCalculation(Node):
         plt.title('Histogram of distance matrix')
         plt.show()
 
-        cls = DBSCAN(metric='precomputed', min_samples=3, eps=0.8)
-        face_labels = cls.fit_predict(distance_matrix)
+        cls = DBSCAN(metric='precomputed', min_samples=4, eps=0.4)
+        labels = cls.fit_predict(distance_matrix)
 
         face_infos = []
-        for uniq in np.unique(face_labels):
+        for uniq in np.unique(labels):
             if uniq == -1:
                 continue
-            average_point = np.average(np.array(face_real_positions)[face_labels == uniq], axis=0)
+            average_point = np.average(np.array(self.real_positions)[labels == uniq], axis=0)
             face_infos.append({
-                "face_image": np.array(face_imgs)[face_labels == uniq],
+                "face_image": np.array(self.sampled_imgs)[labels == uniq],
                 "position": average_point
             })
             print(average_point, flush=True)
@@ -125,8 +88,8 @@ class HumanDetectionCalculation(Node):
         self.pub_command.publish(String(data="labeling"))
 
         # 描画
-        for uniq in np.unique(face_labels):
-            show_image_tile([np.array(face_imgs)[face_labels == uniq]], title="label: " + str(uniq))
+        for uniq in np.unique(labels):
+            show_image_tile([np.array(self.sampled_imgs)[labels == uniq]], title="label: " + str(uniq))
 
         fig = plt.figure()
         ax = Axes3D(fig)
@@ -140,11 +103,13 @@ class HumanDetectionCalculation(Node):
 
         fig = plt.figure()
         ax = Axes3D(fig)
-        for uniq in np.unique(face_labels):
-            face_points = np.array(face_real_positions)[face_labels == uniq]
+        for uniq in np.unique(labels):
+            face_points = np.array(self.real_positions)[labels == uniq]
             average_point = np.average(face_points, axis=0)
             ax.scatter(face_points[:, 0], face_points[:, 1], face_points[:, 2],
                        color=LABEL_COLOR_SET[-1 if uniq == -1 else uniq % 5])
+            if uniq == -1:
+                continue
             ax.scatter(average_point[0], average_point[1], average_point[2], marker="x", s=300,
                        color=LABEL_COLOR_SET[-1 if uniq == -1 else uniq % 5])
         ax.set_xlim(-5, 5)
