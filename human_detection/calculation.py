@@ -14,7 +14,7 @@ from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
 
 from lib import Logger
-from lib.module import calc_real_position, compare_point, compare_image, show_image_tile
+from lib.module import calc_real_position, compare_point, compare_image, show_image_tile, compare_image_dice
 
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log/")
 SAMPLE_IMAGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample_image/")
@@ -53,14 +53,17 @@ class HumanDetectionCalculation(Node):
             ))
 
         # ノイズの挿入
-        self.sampled_imgs.append(
-            cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "not_face.png")), cv2.COLOR_BGR2RGB)
-        )
+        not_face_img = cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "not_face.png")), cv2.COLOR_BGR2RGB)
+        not_face_img2 = cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "not_face2.png")), cv2.COLOR_BGR2RGB)
+        face_img = cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "face.png")), cv2.COLOR_BGR2RGB)
+        face_img2 = cv2.cvtColor(cv2.imread(os.path.join(SAMPLE_IMAGE_PATH, "face2.png")), cv2.COLOR_BGR2RGB)
+        self.sampled_imgs.append(not_face_img2)
         self.real_positions.append((0, 0, 0))
 
         num_sample = len(self.sampled_imgs)
 
         # k-means下準備
+        """
         distance_matrix = np.zeros((num_sample, num_sample))
         for row in range(num_sample):
             distance_matrix[row, :] = [
@@ -69,6 +72,11 @@ class HumanDetectionCalculation(Node):
                     self.sampled_imgs[col],
                 ) for col in range(num_sample)
             ]
+        """
+        distance_matrix = np.zeros((num_sample, 2))
+        for row in range(num_sample):
+            distance_matrix[row, 0] = compare_image(self.sampled_imgs[row], face_img)
+            distance_matrix[row, 1] = compare_image(self.sampled_imgs[row], not_face_img)
 
         cls = KMeans(n_clusters=2)
         labels = cls.fit_predict(distance_matrix)
@@ -76,8 +84,8 @@ class HumanDetectionCalculation(Node):
         show_image_tile([np.array(self.sampled_imgs)[labels == labels[-1]]], title="not_face")
 
         # 物体の排除
-        face_imgs = np.array(self.sampled_imgs)[labels != labels[-1]]
-        face_real_positions = np.array(self.real_positions)[labels != labels[-1]]
+        face_imgs = np.array(self.sampled_imgs)[labels == labels[-1]]
+        face_real_positions = np.array(self.real_positions)[labels == labels[-1]]
         num_face = face_real_positions.shape[0]
         # self.sampled_imgs.pop(-1)  # 人為的ノイズの削除
 
@@ -88,6 +96,9 @@ class HumanDetectionCalculation(Node):
                 compare_point(
                     face_real_positions[row],
                     face_real_positions[col]
+                ) + compare_image(
+                    face_imgs[row],
+                    face_imgs[col]
                 ) for col in range(num_face)
             ]
 
@@ -96,7 +107,7 @@ class HumanDetectionCalculation(Node):
         plt.title('Histogram of distance matrix')
         plt.show()
 
-        cls = DBSCAN(metric='precomputed', min_samples=5, eps=0.5)
+        cls = DBSCAN(metric='precomputed', min_samples=3, eps=0.8)
         face_labels = cls.fit_predict(distance_matrix)
 
         face_infos = []
@@ -139,6 +150,9 @@ class HumanDetectionCalculation(Node):
         ax.set_xlim(-5, 5)
         ax.set_ylim(-5, 5)
         ax.set_zlim(-3, 3)
+        ax.set_xlabel('X Label')
+        ax.set_ylabel('Y Label')
+        ax.set_zlabel('Z Label')
         plt.show()
         sys.exit(0)
 

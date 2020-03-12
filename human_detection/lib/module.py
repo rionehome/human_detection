@@ -30,6 +30,19 @@ def compare_image(row_img: np.ndarray, col_img: np.ndarray):
     return np.mean(np.abs(row_img - col_img))
 
 
+def compare_image_dice(row_img: np.ndarray, col_img: np.ndarray):
+    row_img = (row_img - row_img.mean()) / row_img.std()
+    col_img = (col_img - col_img.mean()) / col_img.std()
+    row_img = (row_img - np.min(row_img)) / (np.max(row_img) - np.min(row_img))
+    col_img = (col_img - np.min(col_img)) / (np.max(col_img) - np.min(col_img))
+    row_img = np.round(row_img * 10)
+    col_img = np.round(col_img * 10)
+    # print(np.sum(row_img == col_img) / (col_img.shape[0] ** 2), flush=True)
+    # print((np.sum(row_img == col_img) / (col_img.shape[0] ** 2)).shape, flush=True)
+    # return np.mean(np.abs(row_img - col_img))
+    return np.sum(row_img == col_img) / (col_img.shape[0] ** 2 * 3)
+
+
 def to_quaternion_rad(w, z):
     return math.acos(w) * 2 * np.sign(z)
 
