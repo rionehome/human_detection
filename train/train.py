@@ -2,13 +2,12 @@ from datetime import datetime
 import os
 
 import keras
-from keras.applications.vgg16 import VGG16
 from keras import models
 from keras import layers
 from keras import optimizers
 from keras.preprocessing.image import ImageDataGenerator
-
-from lib.tools import save_history, show_image_tile
+import numpy as np
+from lib.tools import save_history
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -47,17 +46,31 @@ class CustomImageDataGenerator(ImageDataGenerator):
         while True:
             batch_x, batch_y = next(batches)
             batch_x = (0.299 * batch_x[:, :, :, 0] + 0.587 * batch_x[:, :, :, 1] + 0.114 * batch_x[:, :, :, 2]) / 255.
+            batch_x = batch_x[:, :, :, np.newaxis]
             # 返り値
-            yield (batch_x, batch_y)
+            yield batch_x, batch_y
 
 
 def create_model():
-    input_data = layers.Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3))
-    vgg16_model = VGG16(include_top=False)
+    input_data = layers.Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 1))
+    conv1 = layers.Conv2D(filters=32, kernel_size=(3, 3), padding='same')(input_data)
+    conv1 = layers.BatchNormalization()(conv1)
+    conv1 = layers.Activation('relu')(conv1)
+    conv1 = layers.MaxPool2D(pool_size=(2, 2))(conv1)
+    conv2 = layers.Conv2D(filters=64, kernel_size=(3, 3), padding='same')(conv1)
+    conv2 = layers.BatchNormalization()(conv2)
+    conv2 = layers.Activation('relu')(conv2)
+    conv2 = layers.MaxPool2D(pool_size=(2, 2))(conv2)
+    conv3 = layers.Conv2D(filters=128, kernel_size=(3, 3), padding='same')(conv2)
+    conv3 = layers.BatchNormalization()(conv3)
+    conv3 = layers.Activation('relu')(conv3)
+    conv3 = layers.MaxPool2D(pool_size=(2, 2))(conv3)
+    # vgg16_model = VGG16(include_top=False)
     # vgg16_model.trainable = True
-    for layer in vgg16_model.layers[:15]:
-        layer.trainable = False
-    flatten = layers.Flatten()(vgg16_model(input_data))
+    # for layer in vgg16_model.layers[:15]:
+    #    layer.trainable = False
+    # flatten = layers.Flatten()(vgg16_model(input_data))
+    flatten = layers.Flatten()(conv3)
     dense1 = layers.Dense(256, activation='relu')(flatten)
     dense1 = layers.Dropout(0.3)(dense1)
     predict = layers.Dense(2, activation='softmax')(dense1)
