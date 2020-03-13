@@ -7,7 +7,7 @@ from keras import models
 from keras import layers
 from keras import optimizers
 from keras.preprocessing.image import ImageDataGenerator
-import numpy as np
+
 from lib.tools import save_history, show_image_tile
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -24,23 +24,31 @@ class CustomImageDataGenerator(ImageDataGenerator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def random_transform(self, x, seed=1):
-        x = super().random_transform(x, seed=seed)
-        # xはnp.float32型になっている
-        x = self.addGaussianNoise(x, seed=seed)
-
-        return x
-
-    def addGaussianNoise(self, src, seed):
-        row, col, ch = src.shape
-        mean = 0
-        var = 0.1
-        sigma = 15
-        gauss = np.random.normal(mean, sigma, (row, col, ch))
-        gauss = gauss.reshape(row, col, ch)
-        noisy = src + gauss
-
-        return noisy
+    def flow_from_directory(self,
+                            directory,
+                            target_size=(256, 256),
+                            color_mode='rgb',
+                            classes=None,
+                            class_mode='categorical',
+                            batch_size=32,
+                            shuffle=True,
+                            seed=None,
+                            save_to_dir=None,
+                            save_prefix='',
+                            save_format='png',
+                            follow_links=False,
+                            subset=None,
+                            interpolation='nearest'):
+        # 親クラスのflow_from_directory
+        batches = super().flow_from_directory(directory, target_size, color_mode, classes, class_mode, batch_size,
+                                              shuffle, seed, save_to_dir, save_prefix, save_format, follow_links,
+                                              subset, interpolation)
+        # 拡張処理
+        while True:
+            batch_x, batch_y = next(batches)
+            batch_x = (0.299 * batch_x[:, :, :, 0] + 0.587 * batch_x[:, :, :, 1] + 0.114 * batch_x[:, :, :, 2]) / 255.
+            # 返り値
+            yield (batch_x, batch_y)
 
 
 def create_model():
@@ -65,7 +73,7 @@ def create_model():
 
 
 def train():
-    data_gen = ImageDataGenerator(rescale=1. / 255)
+    data_gen = CustomImageDataGenerator()
     train_data_iterator = data_gen.flow_from_directory(
         os.path.join(DATASET_PATH, "train_image"),
         target_size=(IMAGE_SIZE, IMAGE_SIZE),
