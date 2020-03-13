@@ -5,6 +5,7 @@ import keras
 from keras import models
 from keras import layers
 from keras import optimizers
+from keras.applications import VGG16
 from keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 from lib.tools import save_history
@@ -53,6 +54,10 @@ class CustomImageDataGenerator(ImageDataGenerator):
 
 def create_model():
     input_data = layers.Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 1))
+    conv1 = layers.Conv2D(filters=3, kernel_size=(3, 3), padding='same')(input_data)
+    conv1 = layers.BatchNormalization()(conv1)
+    conv1 = layers.Activation('relu')(conv1)
+    """
     conv1 = layers.Conv2D(filters=32, kernel_size=(3, 3), padding='same')(input_data)
     conv1 = layers.BatchNormalization()(conv1)
     conv1 = layers.Activation('relu')(conv1)
@@ -65,12 +70,13 @@ def create_model():
     conv3 = layers.BatchNormalization()(conv3)
     conv3 = layers.Activation('relu')(conv3)
     conv3 = layers.MaxPool2D(pool_size=(2, 2))(conv3)
-    # vgg16_model = VGG16(include_top=False)
+    """
+    vgg16_model = VGG16(include_top=False)
     # vgg16_model.trainable = True
-    # for layer in vgg16_model.layers[:15]:
-    #    layer.trainable = False
-    # flatten = layers.Flatten()(vgg16_model(input_data))
-    flatten = layers.Flatten()(conv3)
+    for layer in vgg16_model.layers[:15]:
+        layer.trainable = False
+    flatten = layers.Flatten()(vgg16_model(conv1))
+    # flatten = layers.Flatten()(conv3)
     dense1 = layers.Dense(256, activation='relu')(flatten)
     dense1 = layers.Dropout(0.3)(dense1)
     predict = layers.Dense(2, activation='softmax')(dense1)
@@ -138,8 +144,8 @@ def train():
 
     model = models.load_model(os.path.join(LOG_PATH, "model.h5"))
 
-    print(model.evaluate_generator(test_data_iterator))
-    print(model.predict_generator(test_data_iterator))
+    print(model.evaluate_generator(test_data_iterator, steps=BATCH_SIZE))
+    # print(model.predict_generator(test_data_iterator, steps=BATCH_SIZE))
 
 
 if __name__ == '__main__':

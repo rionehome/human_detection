@@ -42,7 +42,9 @@ class HumanDetectionSampling(Node):
         print("load complete!", flush=True)
 
     def is_face(self, image_array: np.ndarray):
-        y = self.model.predict(cv2.resize(image_array, (INPUT_SIZE, INPUT_SIZE))[np.newaxis, :, :, :]).argmax(axis=1)[0]
+        y = self.model.predict(
+            cv2.resize(image_array, (INPUT_SIZE, INPUT_SIZE))[np.newaxis, :, :, :] / 255.
+        ).argmax(axis=1)[0]
 
         return not bool(y)
 

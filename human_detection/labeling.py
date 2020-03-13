@@ -58,7 +58,7 @@ class HumanDetectionLabeling(Node):
             print("finish", flush=True)
             for i in range(len(self.face_infos)):
                 print(collections.Counter(self.face_infos[i]["genders"]).most_common()[0][0], flush=True)
-                human_state = "standing" if self.face_infos[i]["position"][2] > 0.5 else "sitting"
+                human_state = "standing" if self.face_infos[i]["position"][2] > 0.95 else "sitting"
                 cv2.imwrite(
                     os.path.join(
                         LOG_DIR, "labeling", "{}-{}-{}.png".format(
